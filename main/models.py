@@ -49,18 +49,20 @@ class Cell(models.Model):
     # TODO: CASCADE or PROTECT?
     zone = models.ForeignKey(Zone, on_delete=models.CASCADE)
     criterion = models.ForeignKey(Criterion, on_delete=models.PROTECT)
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True)
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True)
 
-    mark = models.SmallIntegerField()
+    # TODO: Use mark_range_min and mark_range_max from Criterion (seems a bit complicated to implement).
+    MARK_CHOICES = [(i, i) for i in range(0, 6)]
+    mark = models.SmallIntegerField(choices=MARK_CHOICES)
     confirmation = models.BooleanField()
 
-    customer_comment = models.TextField()
-    customer_comment_time = models.DateTimeField(default=timezone.now)
+    customer_comment = models.TextField(blank=True)
+    customer_comment_time = models.TimeField(default=timezone.now)
     customer_comment_photo = models.ImageField(upload_to='./media/customer_photos/', null=True, blank=True)
 
-    contractor_comment = models.TextField()
-    contractor_comment_time = models.DateTimeField(default=timezone.now)
+    contractor_comment = models.TextField(blank=True)
+    contractor_comment_time = models.TimeField(default=timezone.now)
     contractor_comment_photo = models.ImageField(upload_to='./media/contractor_photos/', null=True, blank=True)
 
     def __str__(self):
