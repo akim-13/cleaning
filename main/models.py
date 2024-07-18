@@ -7,6 +7,8 @@ from django.utils import timezone
 
 class Location(models.Model):
     location_name = models.CharField(max_length=255)
+    mark_range_min = models.SmallIntegerField(default=0)
+    mark_range_max = models.SmallIntegerField(default=5)
 
     def __str__(self):
         return self.location_name
@@ -35,27 +37,14 @@ class Zone(models.Model):
         return self.zone_name
 
 
-class Criterion(models.Model):
-    # Relationships
-    location = models.ForeignKey(Location, on_delete=models.CASCADE)
-
-    criterion_name = models.CharField(max_length=255)
-    mark_range_min = models.SmallIntegerField(default=0)
-    mark_range_max = models.SmallIntegerField(default=5)
-
-    def __str__(self):
-        return self.criterion_name
-
-
 class Cell(models.Model):
     # Relationships
-    # TODO: CASCADE or PROTECT for zone?
+    # TODO: Issue a warninng when deleting a zone, since it'll delete all cells linked to it.
     zone = models.ForeignKey(Zone, on_delete=models.CASCADE)
-    criterion = models.ForeignKey(Criterion, on_delete=models.PROTECT)
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True)
 
-    # TODO: Use mark_range_min and mark_range_max from Criterion (seems har to implement atm).
+    # TODO: Use mark_range_min and mark_range_max from Location (seems har to implement atm).
     MARK_CHOICES = [(i, i) for i in range(0, 6)]
     mark = models.SmallIntegerField(choices=MARK_CHOICES)
     confirmation = models.BooleanField()
@@ -69,4 +58,4 @@ class Cell(models.Model):
     contractor_comment_photo = models.ImageField(upload_to='./media/contractor_photos/', null=True, blank=True)
 
     def __str__(self):
-        return (self.criterion, self.zone)
+        return (self.zone, self.mark, self.confirmation, self.customer_comment, self.contractor_comment)
