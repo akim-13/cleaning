@@ -1,17 +1,52 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <title>Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .form-container {
+            width: 300px;
+            margin: 0 auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .form-container h2 {
+            text-align: center;
+        }
+        .form-container form {
+            display: flex;
+            flex-direction: column;
+        }
+        .form-container form input {
+            margin-bottom: 10px;
+            padding: 8px;
+            font-size: 14px;
+        }
+        .form-container form button {
+            padding: 10px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .form-container form button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
 <body>
-
-<h1>LOGIN PAGE</h1>
-
-<p>Here's a temporary list of links:</p>
-<ul>
-    <li><a href="/admin/">Admin</a></li>
-    <li><a href="/register/">Register</a></li>
-    <li><a href="/example-location/fill-out/">Fill out</a></li>
-    <li><a href="/example-location/summary/">Summary</a></li>
-    <li><a href="/example-location/configure/">Configurator</a></li>
-</ul>
-
+    <div class="form-container">
+        <h2>Login</h2>
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Login</button>
+        </form>
+    </div>
 </body>
 </html>
