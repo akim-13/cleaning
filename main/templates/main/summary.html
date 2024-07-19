@@ -1,10 +1,32 @@
 <!DOCTYPE html>
 <html>
+
+<!-- TODO: Put in a separate CSS file. -->
+<style>
+    table, th, td {
+        border:1px solid black;
+    }
+</style>
+
 <body>
 
-<h1>SUMMARY PAGE</h1>
+<h1>SUMMARY PAGE for {{ location }}</h1>
 
-<p>{{ total_average }}</p>
+
+<table>
+    <tr>
+        <th>Zone</th>
+        <th>Average</th>
+    </tr>
+    {% for zone, average in zones_average_marks.items %}
+        <tr>
+            <td>{{ zone }}</td>
+            <td>{{ average }}</td>
+        </tr>
+    {% endfor %}
+</table>
+
+<p>Total average: {{ total_average_mark }}</p>
 
 </body>
 </html>

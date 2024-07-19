@@ -15,18 +15,25 @@ def fill_out(request, location):
 
 
 def summary(request, location):
-    # TODO: Get everything from the database.
-    # 1. Get all the zones for the location.
-    # 2. For each zone, get all its cells and calculate the average mark.
-    # 3. Calculate the total average mark for the location: sum(average marks) / count(zones).
-    zones = None
-    zones_average_marks = None 
-    total_average_mark = 4.8
+    print(location)
+    # Get all the zones for the location.
+    zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
+
+    # For each zone, get all its cells and calculate the average mark.
+    zones_average_marks = {}
+    for zone in zone_names:
+        cells = Cell.objects.filter(location__location_name=location, zone__zone_name=zone)
+        zone_average_mark = sum(cell.mark for cell in cells) / len(cells) if len(cells) > 0 else 0
+        zones_average_marks[zone] = zone_average_mark
+
+    total_average_mark = sum(zones_average_marks.values()) / len(zones_average_marks) if len(zones_average_marks) > 0 else 0
+
     context = { 
-        'zones': zones,
+        'location': location,
         'zones_average_marks': zones_average_marks,
         'total_average_mark': total_average_mark
     }
+
     return render(request, 'main/summary.html', context)
 
 

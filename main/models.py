@@ -28,8 +28,8 @@ class User(models.Model):
 
 class Zone(models.Model):
     # Relationships
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='zones_created', null=True, blank=True)
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='zones', null=True, blank=True)
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='zones', null=True, blank=True)
 
     zone_name = models.CharField(max_length=255)
 
@@ -40,9 +40,9 @@ class Zone(models.Model):
 class Cell(models.Model):
     # Relationships
     # TODO: Issue a warninng when deleting a zone, since it'll delete all cells linked to it.
-    zone = models.ForeignKey(Zone, on_delete=models.CASCADE)
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False)
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True)
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='cells')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='cells')
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='cells')
 
     # TODO: Use mark_range_min and mark_range_max from Location (seems har to implement atm).
     MARK_CHOICES = [(i, i) for i in range(0, 6)]
@@ -58,4 +58,4 @@ class Cell(models.Model):
     contractor_comment_photo = models.ImageField(upload_to='./media/contractor_photos/', null=True, blank=True)
 
     def __str__(self):
-        return (self.zone, self.mark, self.confirmation, self.customer_comment, self.contractor_comment)
+        return f'[{self.location}] {self.zone} | {self.mark} | {self.confirmation} | {self.customer_comment} | {self.contractor_comment}'
