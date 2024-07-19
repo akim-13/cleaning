@@ -7,6 +7,7 @@ class UserAdmin(BaseUserAdmin):
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
 
+    # These fields are displayed on admin page
     list_display = ('username', 'is_staff', 'is_active')
     list_filter = ('is_staff', 'is_active')
     fieldsets = (
