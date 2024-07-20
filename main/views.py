@@ -5,7 +5,7 @@ from .forms import CustomUserCreationForm, CustomAuthenticationForm
 
 
 def login_view(request):
-    # if smth was filled and submitted
+    # if smth was filled and submitted, basically checks if smth was posted 
     if request.method == 'POST':
         # related to forms, used for validating login credentials
         form = CustomAuthenticationForm(request, data=request.POST)
@@ -23,7 +23,7 @@ def login_view(request):
     return render(request, 'main/login.html', {'form': form})
 
 def register_view(request):
-    # almost simmilar to login
+    # almost similar to login
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():

@@ -16,10 +16,6 @@ class Location(models.Model):
 
 class CustomUserManager(BaseUserManager):
     def create_user(self, username, password=None, **extra_fields): # extra fields make this flexible
-        if not username:
-            raise ValueError('The Username field must be set')
-        if not password:
-            raise ValueError('The Password field must be set')
         user = self.model(username=username, **extra_fields)
         user.set_password(password) # hashing before putting in db
         user.save(using=self._db)
