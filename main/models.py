@@ -15,7 +15,11 @@ class Location(models.Model):
         return self.location_name
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, username, password=None, **extra_fields): # extra fields make this flexible
+    def create_user(self, username, password, **extra_fields): # extra fields make this flexible
+        if not username:
+            raise ValueError('The Username field must be set')
+        if not password:
+            raise ValueError('The Password field must be set')
         user = self.model(username=username, **extra_fields)
         user.set_password(password) # hashing before putting in db
         user.save(using=self._db)
@@ -73,6 +77,7 @@ class Zone(models.Model):
         return self.zone_name
 
 
+# TODO: Add a timestamp field (?).
 class Cell(models.Model):
     # Relationships
     # TODO: Issue a warninng when deleting a zone, since it'll delete all cells linked to it.

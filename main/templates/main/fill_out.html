@@ -1,8 +1,36 @@
 <!DOCTYPE html>
 <html>
+
+<!-- TODO: Put in a separate CSS file. -->
+<style>
+    table, th, td {
+        border:1px solid black;
+    }
+</style>
+
 <body>
 
 <h1>FILL OUT PAGE</h1>
+
+<table>
+    <tr>
+        <th>Зона</th>
+        <th>Оценка</th>
+        <th>Подтверждение</th>
+        <th>Замечания</th>
+        <th>Коментарии к замечаниям</th>
+    </tr>
+
+    {% for row in rows %}
+        <tr>
+            <td>{{ row.zone }}</td>
+            <td>{{ row.mark }}</td>
+            <td>{{ row.confirmation }}</td>
+            <td>{{ row.customer_comment }}</td>
+            <td>{{ row.contractor_comment }}</td>
+        </tr>
+    {% endfor %}
+</table>
 
 </body>
 </html>

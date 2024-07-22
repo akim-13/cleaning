@@ -3,7 +3,6 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 
-
 def login_view(request):
     # if smth was filled and submitted, basically checks if smth was posted 
     if request.method == 'POST':
@@ -22,6 +21,7 @@ def login_view(request):
         form = CustomAuthenticationForm()
     return render(request, 'main/login.html', {'form': form})
 
+
 def register_view(request):
     # almost similar to login
     if request.method == 'POST':
@@ -34,14 +34,49 @@ def register_view(request):
         form = CustomUserCreationForm()
     return render(request, 'main/register.html', {'form': form})
 
+
 def fill_out(request, location):
-    return render(request, 'main/fill_out.html')
+    # Get all the zones for the location.
+    zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
+
+    cells = {}
+
+    for zone in zone_names:
+        # Get all the cells for the zone.
+        zone_cells = Cell.objects.filter(location__location_name=location, zone__zone_name=zone)
+        for cell in zone_cells:
+            if cell.mark:
+                cells[(zone, 'mark')] = cell.mark
+            elif cell.confirmation:
+                cells[(zone, 'confirmation')] = cell.confirmation
+            elif cell.customer_comment:
+                cells[(zone, 'customer_comment')] = cell.customer_comment
+            elif cell.contractor_comment:
+                cells[(zone, 'contractor_comment')] = cell.contractor_comment
+
+    rows = []
+    for zone in zone_names:
+        row = {
+            'zone': zone,
+            'mark': cells.get((zone, 'mark'), ''),
+            'confirmation': cells.get((zone, 'confirmation'), ''),
+            'customer_comment': cells.get((zone, 'customer_comment'), ''),
+            'contractor_comment': cells.get((zone, 'contractor_comment'), '')
+        }
+        rows.append(row)
+    
+    context = {
+        'rows': rows
+    }
+
+    return render(request, 'main/fill_out.html', context)
+
 
 def main(request):
     return render(request, 'main/main.html')
 
+
 def summary(request, location):
-    print(location)
     # Get all the zones for the location.
     zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
 
