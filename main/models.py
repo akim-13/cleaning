@@ -77,26 +77,49 @@ class Zone(models.Model):
         return self.zone_name
 
 
-# TODO: Add a timestamp field (?).
-class Cell(models.Model):
+class Mark(models.Model):
     # Relationships
-    # TODO: Issue a warninng when deleting a zone, since it'll delete all cells linked to it.
-    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='cells')
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='cells')
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='cells')
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='marks')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='marks')
 
-    # TODO: Use mark_range_min and mark_range_max from Location (seems har to implement atm).
+    # TODO: Use mark_range_min and mark_range_max from Location (seems hard to implement atm).
     MARK_CHOICES = [(i, i) for i in range(0, 6)]
     mark = models.SmallIntegerField(choices=MARK_CHOICES)
-    confirmation = models.BooleanField()
-
-    customer_comment = models.TextField(blank=True)
-    customer_comment_time = models.TimeField(default=timezone.now)
-    customer_comment_photo = models.ImageField(upload_to='./media/customer_photos/', null=True, blank=True)
-
-    contractor_comment = models.TextField(blank=True)
-    contractor_comment_time = models.TimeField(default=timezone.now)
-    contractor_comment_photo = models.ImageField(upload_to='./media/contractor_photos/', null=True, blank=True)
+    last_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f'[{self.location}] {self.zone} | {self.mark} | {self.confirmation} | {self.customer_comment} | {self.contractor_comment}'
+        return self.mark
+
+
+class Confirmation(models.Model):
+    # Relationships
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='confirmations')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='confirmations')
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='confirmations')
+
+    confirmation = models.BooleanField()
+    last_modified = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.confirmation
+
+
+class Comment(models.Model):
+    # Relationships
+    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='comments')
+    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='comments')
+
+    is_made_by_customer_not_contractor = models.BooleanField()
+    comment = models.TextField(blank=True)
+    allocated_time = models.TimeField(default=timezone.now)
+
+    photo = models.ImageField(upload_to='./attachments/', null=True, blank=True)
+    last_modified = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        if self.is_made_by_customer_not_contractor:
+            return f'Customer: "{self.comment}"'
+        else:
+            return f'Contractor: "{self.comment}"'

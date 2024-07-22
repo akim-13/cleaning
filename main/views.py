@@ -1,4 +1,4 @@
-from .models import Cell, Location, User, Zone
+from .models import Location, User, Zone, Mark, Confirmation, Comment
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, authenticate
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
@@ -43,6 +43,7 @@ def fill_out(request, location):
 
     for zone in zone_names:
         # Get all the cells for the zone.
+        # FIXME: Replcae Cell.
         zone_cells = Cell.objects.filter(location__location_name=location, zone__zone_name=zone)
         for cell in zone_cells:
             if cell.mark:
@@ -83,7 +84,9 @@ def summary(request, location):
     # For each zone, get all its cells and calculate the average mark.
     zones_average_marks = {}
     for zone in zone_names:
-        cells = Cell.objects.filter(location__location_name=location, zone__zone_name=zone)
+        # FIXME: Replcae Cell.
+        #cells = Cell.objects.filter(location__location_name=location, zone__zone_name=zone)
+        marks = 
         zone_average_mark = sum(cell.mark for cell in cells) / len(cells) if len(cells) > 0 else 0
         zones_average_marks[zone] = zone_average_mark
 

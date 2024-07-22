@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import User, Cell, Location, Zone
+from .models import Location, User, Zone, Mark, Confirmation, Comment
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 class UserAdmin(BaseUserAdmin):
@@ -25,6 +25,8 @@ class UserAdmin(BaseUserAdmin):
     filter_horizontal = ()
 
 admin.site.register(User, UserAdmin)
-admin.site.register(Cell)
 admin.site.register(Location)
 admin.site.register(Zone)
+admin.site.register(Mark)
+admin.site.register(Confirmation)
+admin.site.register(Comment)
