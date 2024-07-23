@@ -12,11 +12,10 @@
 
 <h1>SUMMARY PAGE for {{ location }}</h1>
 
-
 <table>
     <tr>
-        <th>Zone</th>
-        <th>Average</th>
+        <th>Зона</th>
+        <th>Средняя оценка</th>
     </tr>
     {% for zone, average in zones_average_marks.items %}
         <tr>
@@ -26,7 +25,7 @@
     {% endfor %}
 </table>
 
-<p>Total average: {{ total_average_mark }}</p>
+<p>Итого средняя: {{ total_average_mark }}</p>
 
 </body>
 </html>
