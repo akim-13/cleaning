@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Location, User, Zone, Mark, Confirmation, Comment
+from .models import Location, User, Zone, Mark, Comment
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 class UserAdmin(BaseUserAdmin):
@@ -28,5 +28,5 @@ admin.site.register(User, UserAdmin)
 admin.site.register(Location)
 admin.site.register(Zone)
 admin.site.register(Mark)
-admin.site.register(Confirmation)
 admin.site.register(Comment)
+

@@ -31,6 +31,7 @@ class CustomUserManager(BaseUserManager):
         extra_fields.setdefault('is_superuser', True)
         return self.create_user(username, password, **extra_fields)
 
+
 class User(AbstractBaseUser, PermissionsMixin):
     username = models.CharField(max_length=255, unique=True)
     password = models.CharField(max_length=255)
@@ -86,23 +87,16 @@ class Mark(models.Model):
     # TODO: Use mark_range_min and mark_range_max from Location (seems hard to implement atm).
     MARK_CHOICES = [(i, i) for i in range(0, 6)]
     mark = models.SmallIntegerField(choices=MARK_CHOICES)
+    is_approved = models.BooleanField(default=False)
     last_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return self.mark
-
-
-class Confirmation(models.Model):
-    # Relationships
-    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='confirmations')
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='confirmations')
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='confirmations')
-
-    confirmation = models.BooleanField()
-    last_modified = models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return self.confirmation
+        display_string = f'[{self.location}] {self.zone}: {self.mark}'
+        
+        if self.is_approved:
+            return display_string + ' (✔)'
+        else:
+            return display_string + ' (❌)'
 
 
 class Comment(models.Model):
@@ -119,7 +113,8 @@ class Comment(models.Model):
     last_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
+        display_string = f'[{self.location}] {self.zone}: '
         if self.is_made_by_customer_not_contractor:
-            return f'Customer: "{self.comment}"'
+            return display_string + f'Customer: "{self.comment}"'
         else:
-            return f'Contractor: "{self.comment}"'
+            return display_string + f'Contractor: "{self.comment}"'

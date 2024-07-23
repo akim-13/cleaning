@@ -1,5 +1,6 @@
-from .models import Location, User, Zone, Mark, Confirmation, Comment
+from .models import Location, User, Zone, Mark,Comment
 from django.shortcuts import render, redirect
+from django.db.models import Q
 from django.contrib.auth import login, authenticate
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 
@@ -38,34 +39,29 @@ def register_view(request):
 def fill_out(request, location):
     # Get all the zones for the location.
     zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
-
-    cells = {}
-
-    for zone in zone_names:
-        # Get all the cells for the zone.
-        # FIXME: Replcae Cell.
-        zone_cells = Cell.objects.filter(location__location_name=location, zone__zone_name=zone)
-        for cell in zone_cells:
-            if cell.mark:
-                cells[(zone, 'mark')] = cell.mark
-            elif cell.confirmation:
-                cells[(zone, 'confirmation')] = cell.confirmation
-            elif cell.customer_comment:
-                cells[(zone, 'customer_comment')] = cell.customer_comment
-            elif cell.contractor_comment:
-                cells[(zone, 'contractor_comment')] = cell.contractor_comment
-
     rows = []
+
+    # TODO: Does not account for multiple marks/comments per zone, i.e. time.
     for zone in zone_names:
+        location_zone_filter = Q(location__location_name=location, zone__zone_name=zone)
+        marks = list(Mark.objects.filter(location_zone_filter))
+        customer_comments = list(Comment.objects.filter(location_zone_filter, is_made_by_customer_not_contractor=True))
+        contractor_comments = list(Comment.objects.filter(location_zone_filter, is_made_by_customer_not_contractor=False))
+
         row = {
             'zone': zone,
-            'mark': cells.get((zone, 'mark'), ''),
-            'confirmation': cells.get((zone, 'confirmation'), ''),
-            'customer_comment': cells.get((zone, 'customer_comment'), ''),
-            'contractor_comment': cells.get((zone, 'contractor_comment'), '')
+            'mark': marks[0].mark if marks else 'Н/Д',
+            'approval': '✔' if (marks and marks[0].is_approved) else '❌',
+            'customer_comment': customer_comments[0].comment if customer_comments else '',
+            'contractor_comment': contractor_comments[0].comment if contractor_comments else ''
         }
         rows.append(row)
-    
+
+        # Remove the first element from the lists.
+        marks = marks[1:]
+        customer_comments = customer_comments[1:]
+        contractor_comments = contractor_comments[1:]
+
     context = {
         'rows': rows
     }
@@ -84,10 +80,8 @@ def summary(request, location):
     # For each zone, get all its cells and calculate the average mark.
     zones_average_marks = {}
     for zone in zone_names:
-        # FIXME: Replcae Cell.
-        #cells = Cell.objects.filter(location__location_name=location, zone__zone_name=zone)
-        marks = 
-        zone_average_mark = sum(cell.mark for cell in cells) / len(cells) if len(cells) > 0 else 0
+        marks = Mark.objects.filter(location__location_name=location, zone__zone_name=zone)
+        zone_average_mark = sum(mark.mark for mark in marks) / len(marks) if len(marks) > 0 else 0
         zones_average_marks[zone] = zone_average_mark
 
     total_average_mark = sum(zones_average_marks.values()) / len(zones_average_marks) if len(zones_average_marks) > 0 else 0
