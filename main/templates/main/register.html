@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>Register</title>
+    <!-- TODO: Put in a separate CSS file. -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -41,11 +42,11 @@
 </head>
 <body>
     <div class="form-container">
-        <h2>Регистрация</h2>
+        <h2>Register</h2>
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit">Зарегистрировать</button>
+            <button type="submit">Register</button>
         </form>
     </div>
 </body>

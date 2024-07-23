@@ -36,7 +36,7 @@ class CustomUserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
-    username = models.CharField(max_length=255, unique=True,)
+    username = models.CharField(max_length=255, unique=True)
     password = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
@@ -63,7 +63,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name=('user permissions'),
     )
     
-    # For connecting to db table.
+    # For connecting to tne db table.
     class Meta:
         db_table = 'users'
     
@@ -72,7 +72,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Zone(models.Model):
-    # Relationships.
+    # Relations.
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='zones', null=True, blank=True)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='zones', null=True, blank=True)
 
@@ -83,7 +83,7 @@ class Zone(models.Model):
 
 
 class Mark(models.Model):
-    # Relationships.
+    # Relations.
     zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='marks')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='marks')
@@ -95,16 +95,16 @@ class Mark(models.Model):
     last_modified = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        display_string = f'[{self.location}] {self.zone}: {self.mark}'
+        display_string = f'[{self.location}] {self.zone}: {self.mark} '
         
         if self.is_approved:
-            return display_string + ' (✔)'
+            return display_string + '(✔)'
         else:
-            return display_string + ' (❌)'
+            return display_string + '(❌)'
 
 
 class Comment(models.Model):
-    # Relationships.
+    # Relations.
     zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='comments')
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='comments')

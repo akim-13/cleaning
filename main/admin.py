@@ -3,6 +3,7 @@ from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import Location, User, Zone, Mark, Comment
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 
+# ??: BaseUserAdmin is the same as UserAdmin, so what does this inheritance mean?
 class UserAdmin(BaseUserAdmin):
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
@@ -29,4 +30,3 @@ admin.site.register(Location)
 admin.site.register(Zone)
 admin.site.register(Mark)
 admin.site.register(Comment)
-

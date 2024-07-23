@@ -14,6 +14,7 @@ class CustomUserCreationForm(UserCreationForm):
             'password2': _('Confirm password'),  
         }
 
+# Needed for changing user settings such as admin page access.
 class CustomUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):
         model = User
