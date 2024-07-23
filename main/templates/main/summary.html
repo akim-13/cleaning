@@ -3,8 +3,20 @@
 
 <!-- TODO: Put in a separate CSS file. -->
 <style>
-    table, th, td {
-        border:1px solid black;
+    table {
+        border-collapse: collapse;
+        width: 80%;
+        margin: 0 auto;
+    }
+
+    th, td {
+        border: 1px solid black;
+        padding: 8px;
+        text-align: center;
+    }
+
+    th {
+        background-color: #f2f2f2;
     }
 </style>
 
@@ -25,7 +37,7 @@
     {% endfor %}
 </table>
 
-<p>Итого средняя: {{ total_average_mark }}</p>
+<p style="text-align: center;">Итого средняя: {{ total_average_mark }}</p>
 
 </body>
 </html>

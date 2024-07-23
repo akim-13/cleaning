@@ -15,17 +15,20 @@ class Location(models.Model):
         return self.location_name
 
 class CustomUserManager(BaseUserManager):
-    def create_user(self, username, password, **extra_fields): # extra fields make this flexible
+
+    def create_user(self, username, password, **extra_fields): 
         if not username:
             raise ValueError('The Username field must be set')
         if not password:
             raise ValueError('The Password field must be set')
         user = self.model(username=username, **extra_fields)
-        user.set_password(password) # hashing before putting in db
+        # Hashes the password before putting it in the db.
+        user.set_password(password)
         user.save(using=self._db)
         return user
 
-    # extra settings for superuser such as givving is_staff - meaning that user can login on admin pannel
+    # Extra settings for superusers, such as `is_staff`,
+    # which allows the user to log into the admin pannel.
     def create_superuser(self, username, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
@@ -41,9 +44,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     objects = CustomUserManager()
 
     USERNAME_FIELD = 'username'
-    REQUIRED_FIELDS = ['password'] # here u can add these extra fields such as neccessity of puting mail address
+    REQUIRED_FIELDS = ['password'] 
     
-    # these settings are needed for avoiding conflicts with varible names and relations between default django settings and db table
+    # These settings are needed for avoiding conflicts with varible names 
+    # and relations between default django settings and the db table
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='custom_user_set',
@@ -59,7 +63,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name=('user permissions'),
     )
     
-    # for connecting to db table
+    # For connecting to db table.
     class Meta:
         db_table = 'users'
     
@@ -68,7 +72,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 class Zone(models.Model):
-    # Relationships
+    # Relationships.
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='zones', null=True, blank=True)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='zones', null=True, blank=True)
 
@@ -79,7 +83,7 @@ class Zone(models.Model):
 
 
 class Mark(models.Model):
-    # Relationships
+    # Relationships.
     zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='marks')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='marks')
@@ -100,7 +104,7 @@ class Mark(models.Model):
 
 
 class Comment(models.Model):
-    # Relationships
+    # Relationships.
     zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='comments')
     location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='comments')

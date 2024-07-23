@@ -1,30 +1,31 @@
 from .models import Location, User, Zone, Mark,Comment
+from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.shortcuts import render, redirect
 from django.db.models import Q
 from django.contrib.auth import login, authenticate
-from .forms import CustomUserCreationForm, CustomAuthenticationForm
 
 def login_view(request):
-    # if smth was filled and submitted, basically checks if smth was posted 
+    # If something has been filled and submitted. 
     if request.method == 'POST':
-        # related to forms, used for validating login credentials
+        # Related to forms, used for validating login credentials.
         form = CustomAuthenticationForm(request, data=request.POST)
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
-            # checks if there exists user
+            # Check if the user exists.
             user = authenticate(username=username, password=password)
             if user is not None:
                 login(request, user)
                 return redirect('main')
     else:
-        # create a new blank (for get, when u load page or above data is incorrect)
+        # ??: Create a new blank (for get, when you
+        # load the page or above data is incorrect).
         form = CustomAuthenticationForm()
     return render(request, 'main/login.html', {'form': form})
 
 
 def register_view(request):
-    # almost similar to login
+    # Similar to `login_view`.
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
@@ -51,7 +52,7 @@ def fill_out(request, location):
         row = {
             'zone': zone,
             'mark': marks[0].mark if marks else 'Н/Д',
-            'approval': '✔' if (marks and marks[0].is_approved) else '❌',
+            'approval': 'Да' if (marks and marks[0].is_approved) else 'Нет',
             'customer_comment': customer_comments[0].comment if customer_comments else '',
             'contractor_comment': contractor_comments[0].comment if contractor_comments else ''
         }
