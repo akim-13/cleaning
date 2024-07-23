@@ -1,22 +1,32 @@
 from django import forms
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm, AuthenticationForm
 from .models import User
+from django.utils.translation import gettext_lazy as _
 
 # needed for hashing password
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
-        # specify required fields, otherwise there gonna be many of them such as mail, last name and etc
-        fields = ('username',)
-        
-# thats for changing user settings such as admin page access
+        fields = ('username', 'password1', 'password2')  
+        labels = {
+            'username': _('Username'),  
+            'password1': _('Password'),
+            'password2': _('Confirm password'),  
+        }
+
 class CustomUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):
         model = User
         fields = ('username',)
+        labels = {
+            'username': _('Username'),
+        }
 
-# verification by using username and password in db
 class CustomAuthenticationForm(AuthenticationForm):
     class Meta:
         model = User
         fields = ('username', 'password')
+        labels = {
+            'username': _('Username'),
+            'password': _('Password'),
+        }

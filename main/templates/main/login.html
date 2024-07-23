@@ -41,11 +41,11 @@
 </head>
 <body>
     <div class="form-container">
-        <h2>Login</h2>
+        <h2>Авторизация</h2>
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit">Login</button>
+            <button type="submit">Вход</button>
         </form>
     </div>
 </body>
