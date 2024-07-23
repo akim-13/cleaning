@@ -1,10 +1,10 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.contrib.auth.admin import UserAdmin 
 from .models import Location, User, Zone, Mark, Comment
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 # ??: BaseUserAdmin is the same as UserAdmin, so what does this inheritance mean?
-class UserAdmin(BaseUserAdmin):
+class AdminPanel(UserAdmin):
     form = CustomUserChangeForm
     add_form = CustomUserCreationForm
 
@@ -25,7 +25,7 @@ class UserAdmin(BaseUserAdmin):
     ordering = ('username',)
     filter_horizontal = ()
 
-admin.site.register(User, UserAdmin)
+admin.site.register(User, AdminPanel)
 admin.site.register(Location)
 admin.site.register(Zone)
 admin.site.register(Mark)

@@ -38,16 +38,33 @@
         .form-container form button:hover {
             background-color: #45a049;
         }
+        .register-button {
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 16px;
+            background-color: #008CBA;
+            color: white;
+            text-align: center;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            text-decoration: none;
+        }
+        .register-button:hover {
+            background-color: #007B9A;
+        }
     </style>
 </head>
 <body>
     <div class="form-container">
-        <h2>Login</h2>
+        <h2>Аунтефикация</h2>
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit">Login</button>
+            <button type="submit">Вход</button>
         </form>
+        <a href="{% url 'register' %}" class="register-button">Регистрация</a>
     </div>
 </body>
 </html>

@@ -1,4 +1,5 @@
-from .models import Location, User, Zone, Mark,Comment
+from django.contrib.auth.decorators import login_required
+from .models import Location, User, Zone, Mark, Comment
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.shortcuts import render, redirect
 from django.db.models import Q
@@ -18,7 +19,7 @@ def login_view(request):
                 login(request, user)
                 return redirect('main')
     else:
-        # ??: Create a new blank (for get, when you
+        # ??: Create a new blank (for getting, when you
         # load the page or above data is incorrect).
         form = CustomAuthenticationForm()
     return render(request, 'main/login.html', {'form': form})
@@ -37,6 +38,12 @@ def register_view(request):
     return render(request, 'main/register.html', {'form': form})
 
 
+@login_required
+def main(request):
+    return render(request, 'main/main.html')
+
+
+@login_required
 def fill_out(request, location):
     # Get all the zones for the location.
     zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
@@ -70,10 +77,7 @@ def fill_out(request, location):
     return render(request, 'main/fill_out.html', context)
 
 
-def main(request):
-    return render(request, 'main/main.html')
-
-
+@login_required
 def summary(request, location):
     # Get all the zones for the location.
     zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
@@ -96,5 +100,6 @@ def summary(request, location):
     return render(request, 'main/summary.html', context)
 
 
+@login_required
 def configure(request, location):
     return render(request, 'main/configure.html')

@@ -18,9 +18,9 @@ class CustomUserManager(BaseUserManager):
 
     def create_user(self, username, password, **extra_fields): 
         if not username:
-            raise ValueError('The Username field must be set')
+            raise ValueError('Логин должен быть заполнен')
         if not password:
-            raise ValueError('The Password field must be set')
+            raise ValueError('Пароль должен быть заполнен')
         user = self.model(username=username, **extra_fields)
         # Hashes the password before putting it in the db.
         user.set_password(password)
