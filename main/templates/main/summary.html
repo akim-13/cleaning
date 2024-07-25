@@ -1,24 +1,11 @@
 <!DOCTYPE html>
 <html>
 
-<!-- TODO: Put in a separate CSS file. -->
-<style>
-    table {
-        border-collapse: collapse;
-        width: 80%;
-        margin: 0 auto;
-    }
-
-    th, td {
-        border: 1px solid black;
-        padding: 8px;
-        text-align: center;
-    }
-
-    th {
-        background-color: #f2f2f2;
-    }
-</style>
+<head>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'main/css/summary.css' %}">
+    <title>Качество уборки</title>
+</head>
 
 <body>
 

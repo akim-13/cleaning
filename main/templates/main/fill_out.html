@@ -1,24 +1,11 @@
 <!DOCTYPE html>
 <html>
 
-<!-- TODO: Put in a separate CSS file. -->
-<style>
-    table {
-        border-collapse: collapse;
-        width: 80%;
-        margin: 0 auto;
-    }
-
-    th, td {
-        border: 1px solid black;
-        padding: 8px;
-        text-align: center;
-    }
-
-    th {
-        background-color: #f2f2f2;
-    }
-</style>
+<head>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'main/css/fill_out.css' %}">
+    <title>Форма качества уборки</title>
+</head>
 
 <body>
 
@@ -42,6 +29,70 @@
             <td>{{ row.contractor_comment }}</td>
         </tr>
     {% endfor %}
+</table>
+
+<p>Пример таблицы:</p>
+
+<table>
+    <tr>
+        <th>Время</th>
+        <th>Зона</th>
+        <th>Оценка</th>
+        <th>Подтверждение</th>
+        <th>Замечания</th>
+        <th>Исправление замечания</th>
+    </tr>
+    <tr>
+        <td rowspan="4">9:00</td>
+        <td>Входная зона</td>
+        <td>от 0 до 5</td>
+        <td>да/нет</td>
+        <td>обязательно: текст, время<br>потенциально: фото</td>
+        <td>обязательно: текст, время<br>потенциально: фото</td>
+    </tr>
+    <tr>
+        <td>туалет</td>
+        <td>5</td>
+        <td>да</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>фудкорт</td>
+        <td>5</td>
+        <td>да</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>...</td>
+        <td>5</td>
+        <td>да</td>
+        <td></td>
+        <td></td>
+    </tr>
+
+    <tr>
+        <td rowspan="2">9:30</td>
+        <td>туалет</td>
+        <td>5</td>
+        <td>да</td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>+</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+
+    <tr>
+        <td>+</td>
+    </tr>
+
+    
 </table>
 
 </body>
