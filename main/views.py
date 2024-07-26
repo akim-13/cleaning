@@ -2,6 +2,7 @@ from django.contrib.auth.decorators import login_required
 from .models import Location, User, Zone, Mark, Comment
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.shortcuts import render, redirect
+from django.http import Http404
 from django.db.models import Q
 from django.contrib.auth import login, authenticate
 
@@ -45,6 +46,9 @@ def main(request):
 
 @login_required
 def fill_out(request, location):
+    if not Location.objects.filter(location_name=location).exists():
+        raise Http404('Локация не найдена')
+
     # Get all the zones for the location.
     zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
     rows = []
@@ -79,6 +83,9 @@ def fill_out(request, location):
 
 @login_required
 def summary(request, location):
+    if not Location.objects.filter(location_name=location).exists():
+        raise Http404('Локация не найдена')
+
     # Get all the zones for the location.
     zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
 

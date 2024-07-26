@@ -7,11 +7,14 @@
 <p>Функциональные страницы</p>
 <ul>
     <li><a href="/admin/">Админ панель</a></li>
-    <li><a href="/">Авторизация</a></li>
-    <li><a href="/register/">Регистрация</a></li>
-    <li><a href="/suncity/fill-out/">Заполнение формы</a></li>
-    <li><a href="/suncity/summary/">Просмтор качества уборки</a></li>
-    <li><a href="/suncity/configure/">Конфигуратор</a></li>
+    <li><a href="{% url 'login' %}">Авторизация</a></li>
+    <li><a href="{% url 'register' %}">Регистрация</a></li>
+
+    <li><a href="{% url 'fill_out' 'suncity' %}">Форма качества уборки</a></li>
+    <li><a href="{% url 'summary' 'suncity' %}">Просмотр качества уборки</a></li>
+    <li><a href="{% url 'configurator' 'suncity' %}">Конфигуратор</a></li>
+
+
 </ul>
 
 </body>
