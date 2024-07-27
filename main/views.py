@@ -1,10 +1,10 @@
-from django.contrib.auth.decorators import login_required
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
 from .models import Location, User, Zone, Mark, Comment
-from .forms import CustomUserCreationForm, CustomAuthenticationForm
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
 from django.http import Http404
 from django.db.models import Q
-from django.contrib.auth import login, authenticate
 
 def login_view(request):
     # If something has been filled and submitted. 
@@ -49,6 +49,16 @@ def fill_out(request, location):
     if not Location.objects.filter(location_name=location).exists():
         raise Http404('Локация не найдена')
 
+    if request.method == 'POST':
+        form = MarkForm(request.POST)
+        if form.is_valid():
+            mark = form.save(commit=False)
+            mark.user = request.user
+            mark.save()
+            return redirect('fill_out', location=location)
+    else:
+        form = MarkForm()
+
     # Get all the zones for the location.
     zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
     rows = []
@@ -75,7 +85,9 @@ def fill_out(request, location):
         contractor_comments = contractor_comments[1:]
 
     context = {
-        'rows': rows
+        'rows': rows,
+        'form': form,
+        'location': location
     }
 
     return render(request, 'main/fill_out.html', context)

@@ -52,7 +52,20 @@
     </tr>
     <tr>
         <td>туалет</td>
-        <td>5</td>
+        <td> 
+            <form action="{% url 'fill_out' location=location %}" method="post">
+                {% csrf_token %}
+                <select name="mark">
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+                <input type="submit" value="OK">
+            </form>
+        </td>
         <td>да</td>
         <td></td>
         <td></td>
@@ -94,6 +107,8 @@
 
     
 </table>
+
+{{ form }}
 
 </body>
 </html>
