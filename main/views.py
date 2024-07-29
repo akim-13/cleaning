@@ -1,10 +1,12 @@
 from django.contrib.auth.decorators import login_required
+from .decorators import groups_required
 from .models import Location, User, Zone, Mark, Comment
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.shortcuts import render, redirect
 from django.http import Http404
 from django.db.models import Q
 from django.contrib.auth import login, authenticate
+from django.contrib.auth.models import Group
 
 def login_view(request):
     # If something has been filled and submitted. 
@@ -20,18 +22,20 @@ def login_view(request):
                 login(request, user)
                 return redirect('main')
     else:
-        # ??: Create a new blank (for getting, when you
+        # Create a new blank (for getting, when you
         # load the page or above data is incorrect).
         form = CustomAuthenticationForm()
     return render(request, 'main/login.html', {'form': form})
 
 
 def register_view(request):
-    # Similar to `login_view`.
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
+            role = form.cleaned_data.get('role')
+            group = Group.objects.get(name=role)
+            user.groups.add(group)
             login(request, user)
             return redirect('main')
     else:
@@ -44,6 +48,7 @@ def main(request):
     return render(request, 'main/main.html')
 
 
+@groups_required('manager_customer', 'manager_contractor')
 @login_required
 def fill_out(request, location):
     if not Location.objects.filter(location_name=location).exists():
@@ -81,6 +86,7 @@ def fill_out(request, location):
     return render(request, 'main/fill_out.html', context)
 
 
+@groups_required('representative_customer', 'representative_contractor')
 @login_required
 def summary(request, location):
     if not Location.objects.filter(location_name=location).exists():
@@ -107,6 +113,7 @@ def summary(request, location):
     return render(request, 'main/summary.html', context)
 
 
+@groups_required ('representative_contractor')
 @login_required
 def configure(request, location):
     return render(request, 'main/configure.html')

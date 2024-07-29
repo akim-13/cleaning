@@ -5,11 +5,12 @@ from .models import User
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username', 'password1', 'password2')
+        fields = ('username', 'password1', 'password2', 'role')
         labels = {
             'username': ('Логин'),
             'password1': ('Пароль'),
             'password2': ('Подтвердите пароль'),
+            'role': ('Выберите вашу роль'),
         }
 
 

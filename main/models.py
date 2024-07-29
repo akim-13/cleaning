@@ -36,10 +36,18 @@ class CustomUserManager(BaseUserManager):
 
 
 class User(AbstractBaseUser, PermissionsMixin):
+    ROLES_CHOICES = [
+        ('manager_contractor', 'Менеджер Исполнитель'),
+        ('manager_customer', 'Менеджер Заказчик'),
+        ('representative_customer', 'Руководитель Объекта'),
+        ('representative_contractor', 'Руководитель Клининга'),
+        ('admin_account', 'Админ Аккаунт'),
+    ]
     username = models.CharField(max_length=255, unique=True)
     password = models.CharField(max_length=255)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    role = models.CharField(max_length=55, choices = ROLES_CHOICES, default = 'manager_customer')
 
     objects = CustomUserManager()
 
