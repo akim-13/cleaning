@@ -11,7 +11,9 @@
 
 <h1>Форма качества уборки</h1>
 
-<table>
+<form id="markForm" action="{% url 'fill_out' location=location %}" method="post">
+{% csrf_token %}
+<table id="tableID">
     <tr>
         <th>Зона</th>
         <th>Оценка</th>
@@ -21,15 +23,23 @@
     </tr>
 
     {% for row in rows %}
-        <tr>
-            <td>{{ row.zone }}</td>
-            <td>{{ row.mark }}</td>
-            <td>{{ row.approval }}</td>
-            <td>{{ row.customer_comment }}</td>
-            <td>{{ row.contractor_comment }}</td>
-        </tr>
+    <tr>
+        <td>{{ row.zone }}</td>
+        <td>{{ row.mark }}</td>
+        <td>{{ row.approval }}</td>
+        <td>{{ row.customer_comment }}</td>
+        <td>{{ row.contractor_comment }}</td>
+    </tr>
     {% endfor %}
+
+    <tr>
+        <td><button type="button" onclick="appendRow()">+</button></td>
+    </tr>
+    
 </table>
+</form>
+<button type="button" onclick="submitForms()">Готово</button>
+
 
 <p>Пример таблицы:</p>
 
@@ -51,24 +61,14 @@
         <td>обязательно: текст, время<br>потенциально: фото</td>
     </tr>
     <tr>
-        <td>туалет</td>
-        <td> 
-            <form action="{% url 'fill_out' location=location %}" method="post">
-                {% csrf_token %}
-                <select name="mark">
-                    <option value="0">0</option>
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5">5</option>
-                </select>
-                <input type="submit" value="OK">
-            </form>
-        </td>
-        <td>да</td>
-        <td></td>
-        <td></td>
+        <form id="markForm" action="{% url 'fill_out' location=location %}" method="post">
+            {% csrf_token %}
+            <td> {{ form.zone }} </td>
+            <td> {{ form.mark }} </td>
+            <td> {{ form.is_approved }} </td>
+            <td></td>
+            <td></td>
+        </form>
     </tr>
     <tr>
         <td>фудкорт</td>
@@ -100,11 +100,7 @@
         <td></td>
         <td></td>
     </tr>
-
-    
 </table>
-
-{{ form }}
 
 <script src="{% static 'main/js/fill_out.js' %}"></script>
 

@@ -1,9 +1,11 @@
+from logger import d, i, w, e
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
 from .models import Location, User, Zone, Mark, Comment
 from django.contrib.auth.decorators import login_required
+from django.template.loader import render_to_string
 from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.db.models import Q
 
 def login_view(request):
@@ -48,14 +50,35 @@ def main(request):
 def fill_out(request, location):
     if not Location.objects.filter(location_name=location).exists():
         raise Http404('Локация не найдена')
-
+        
     if request.method == 'POST':
+        request_is_ajax = request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
+
+        if request_is_ajax and request.POST.get('action') == 'append_row':
+            form = MarkForm()
+            return JsonResponse({
+                'new_row_html': render_to_string('main/_new_row.html', {'form': form})
+            })
+        
         form = MarkForm(request.POST)
         if form.is_valid():
             mark = form.save(commit=False)
             mark.user = request.user
             mark.save()
+
+            if request_is_ajax:
+                return JsonResponse({
+                    'location': location,
+                    'zone': mark.zone.zone_name,
+                    'mark': mark.mark,
+                    'is_approved': mark.is_approved,
+                })
+
+            # For non-AJAX requests, redirect to the same page.
             return redirect('fill_out', location=location)
+
+        if request_is_ajax:
+            return JsonResponse({'error': 'Bad form request'}, status=400)
     else:
         form = MarkForm()
 
