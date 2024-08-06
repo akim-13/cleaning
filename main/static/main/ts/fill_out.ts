@@ -25,13 +25,6 @@ document.getElementById("markForm")!.addEventListener("submit", (event: Event) =
 });
 
 
-function submitForms(): void {
-    document.querySelectorAll('form').forEach(form => {
-        const event = new Event('submit');
-        form.dispatchEvent(event);
-    });
-}
-
 function appendRow(): void {
     const form = document.getElementById("markForm") as HTMLFormElement;
     const csrfToken = (document.querySelector('[name="csrfmiddlewaretoken"]') as HTMLInputElement).value;
@@ -59,6 +52,7 @@ function appendRow(): void {
             return;
         }
 
+        // Append new row.
         // NOTE: This is a workaround, `insertBefore` doesn't work for some reason.
         if (table.rows.length > 1) {
             const lastRow = table.rows[table.rows.length - 1];
@@ -66,7 +60,32 @@ function appendRow(): void {
         } else {
             table.insertAdjacentHTML('beforeend', data.new_row_html);
         }
+        
+        const lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
+        if (lastTimeCell.getAttribute('time-period-ended') === 'true') {
+            // Remove the `last-time-cell` identifier from the previous time cell.
+            let lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
+            lastTimeCell.removeAttribute('id');
 
+            // Insert a new time cell.
+            // TODO: Error handling for -2.
+            const penultimateRow = table.rows[table.rows.length - 2];
+            const newTimeCellHtml = '<td id="last-time-cell" time-period-ended="false" class="time-cell" rowspan="2">10:00</td>'
+            penultimateRow.insertAdjacentHTML('beforebegin', newTimeCellHtml);
+        } else {
+            lastTimeCell.rowSpan += 1;
+        }
     })
     .catch(error => console.error('Error:', error));
+}
+
+
+function submitForms(): void {
+    document.querySelectorAll('form').forEach(form => {
+        const event = new Event('submit');
+        form.dispatchEvent(event);
+    });
+
+    let lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
+    lastTimeCell.setAttribute('time-period-ended', 'true');
 }

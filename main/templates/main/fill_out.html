@@ -15,6 +15,7 @@
 {% csrf_token %}
 <table id="tableID">
     <tr>
+        <th>Время</th>
         <th>Зона</th>
         <th>Оценка</th>
         <th>Утверждена</th>
@@ -22,6 +23,7 @@
         <th>Коментарии к замечаниям</th>
     </tr>
 
+    <td class="time-cell" rowspan="3">9:00 - 10:00</td>
     {% for row in rows %}
     <tr>
         <td>{{ row.zone }}</td>
@@ -32,75 +34,37 @@
     </tr>
     {% endfor %}
 
+    <td id="last-time-cell" class="time-cell" time-period-ended="false" rowspan="4">10:00</td>
     <tr>
+        <td>tst</td>
+        <td>adfs</td>
+        <td>adfa</td>
+        <td>412</td>
+        <td>fads</td>
+    </tr>
+    <tr>
+        <td>tst</td>
+        <td>adfs</td>
+        <td>adfa</td>
+        <td>412</td>
+        <td>fads</td>
+    </tr>
+    <tr>
+        <td>Или тут?</td>
+        <td>adfs</td>
+        <td>adfa</td>
+        <td>412</td>
+        <td>fads</td>
+    </tr>
+    
+    <tr>
+        <td id="empty-cell" class="empty-cell"></td>
         <td><button type="button" onclick="appendRow()">+</button></td>
     </tr>
     
 </table>
 </form>
 <button type="button" onclick="submitForms()">Готово</button>
-
-
-<p>Пример таблицы:</p>
-
-<table>
-    <tr>
-        <th>Время</th>
-        <th>Зона</th>
-        <th>Оценка</th>
-        <th>Подтверждение</th>
-        <th>Замечания</th>
-        <th>Исправление замечания</th>
-    </tr>
-    <tr>
-        <td rowspan="4">9:00</td>
-        <td>Входная зона</td>
-        <td>от 0 до 5</td>
-        <td>да/нет</td>
-        <td>обязательно: текст, время<br>потенциально: фото</td>
-        <td>обязательно: текст, время<br>потенциально: фото</td>
-    </tr>
-    <tr>
-        <form id="markForm" action="{% url 'fill_out' location=location %}" method="post">
-            {% csrf_token %}
-            <td> {{ form.zone }} </td>
-            <td> {{ form.mark }} </td>
-            <td> {{ form.is_approved }} </td>
-            <td></td>
-            <td></td>
-        </form>
-    </tr>
-    <tr>
-        <td>фудкорт</td>
-        <td>5</td>
-        <td>да</td>
-        <td></td>
-        <td></td>
-    </tr>
-    <tr>
-        <td>...</td>
-        <td>5</td>
-        <td>да</td>
-        <td></td>
-        <td></td>
-    </tr>
-
-    <tr>
-        <td rowspan="2">9:30</td>
-        <td>туалет</td>
-        <td>5</td>
-        <td>да</td>
-        <td></td>
-        <td></td>
-    </tr>
-    <tr>
-        <td>+</td>
-        <td></td>
-        <td></td>
-        <td></td>
-        <td></td>
-    </tr>
-</table>
 
 <script src="{% static 'main/js/fill_out.js' %}"></script>
 
