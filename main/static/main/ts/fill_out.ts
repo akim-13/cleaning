@@ -19,10 +19,16 @@ document.getElementById("markForm")!.addEventListener("submit", (event: Event) =
             console.error(data.error);
             return;
         }
+        // TODO: Save data in the db.
         console.log(data.location + ' ' + data.zone + ' ' + data.mark + ' ' + data.is_approved);
     })
     .catch(error => console.error('Error:', error));
 });
+
+
+function getCurrentFormattedTime(): string {
+    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+}
 
 
 function appendRow(): void {
@@ -70,7 +76,9 @@ function appendRow(): void {
             // Insert a new time cell.
             // TODO: Error handling for -2.
             const penultimateRow = table.rows[table.rows.length - 2];
-            const newTimeCellHtml = '<td id="last-time-cell" time-period-ended="false" class="time-cell" rowspan="2">10:00</td>'
+            const currentTime = getCurrentFormattedTime();
+            const unixTimestamp = Math.floor(Date.now() / 1000);
+            const newTimeCellHtml = `<td id="last-time-cell" time-period-ended="false" class="time-cell" rowspan="2" start-time="${unixTimestamp}">${currentTime}</td>`;
             penultimateRow.insertAdjacentHTML('beforebegin', newTimeCellHtml);
         } else {
             lastTimeCell.rowSpan += 1;
@@ -86,6 +94,11 @@ function submitForms(): void {
         form.dispatchEvent(event);
     });
 
-    let lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
+    const lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
+    if (!lastTimeCell.hasAttribute('end-time')) {
+        lastTimeCell.innerHTML += ` - ${getCurrentFormattedTime()}`;
+    }
+    const unixTimestamp = Math.floor(Date.now() / 1000);
+    lastTimeCell.setAttribute('end-time', `${unixTimestamp}`);
     lastTimeCell.setAttribute('time-period-ended', 'true');
 }
