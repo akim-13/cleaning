@@ -7,9 +7,9 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 # Currently, these are not set for debugging purposes.
 
 class Location(models.Model):
-    location_name = models.CharField(max_length=255)
-    mark_range_min = models.SmallIntegerField(default=0)
-    mark_range_max = models.SmallIntegerField(default=5)
+    location_name = models.CharField(verbose_name = 'Объект', max_length=255)
+    mark_range_min = models.SmallIntegerField(verbose_name = 'Минимальная оценка', default=0)
+    mark_range_max = models.SmallIntegerField(verbose_name = 'Максимальная оценка', default=5)
 
     def __str__(self):
         return self.location_name
@@ -21,6 +21,7 @@ class CustomUserManager(BaseUserManager):
             raise ValueError('Логин должен быть заполнен')
         if not password:
             raise ValueError('Пароль должен быть заполнен')
+        extra_fields.setdefault('is_active', False)
         user = self.model(username=username, **extra_fields)
         # Hashes the password before putting it in the db.
         user.set_password(password)
@@ -32,6 +33,8 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(self, username, password=None, **extra_fields):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
+        # Superusers should be active by default
+        extra_fields.setdefault('is_active', True)  
         return self.create_user(username, password, **extra_fields)
 
 
@@ -43,11 +46,11 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('representative_contractor', 'Руководитель Клининга'),
         ('admin_account', 'Админ Аккаунт'),
     ]
-    username = models.CharField(max_length=255, unique=True)
-    password = models.CharField(max_length=255)
-    is_active = models.BooleanField(default=True)
-    is_staff = models.BooleanField(default=False)
-    role = models.CharField(max_length=55, choices = ROLES_CHOICES, default = 'manager_customer')
+    username = models.CharField(verbose_name="Логин",max_length=255, unique=True)
+    password = models.CharField(verbose_name="Пароль", max_length=255)
+    is_active = models.BooleanField(verbose_name="Активен", default=True)
+    is_staff = models.BooleanField(verbose_name="Админ", default=False)
+    role = models.CharField(verbose_name = 'Роль', max_length=55, choices = ROLES_CHOICES, default = 'manager_customer')
 
     objects = CustomUserManager()
 
@@ -60,15 +63,15 @@ class User(AbstractBaseUser, PermissionsMixin):
         'auth.Group',
         related_name='custom_user_set',
         blank=True,
-        help_text=('The groups this user belongs to.'),
-        verbose_name=('groups'),
+        help_text=('Роли к которым принадлежит пользователь.'),
+        verbose_name=('Роли'),
     )
     user_permissions = models.ManyToManyField(
         'auth.Permission',
         related_name='custom_user_permissions_set',
         blank=True,
-        help_text=('Specific permissions for user.'),
-        verbose_name=('user permissions'),
+        help_text=('Специальные возможности пользователя.'),
+        verbose_name=('Возможности пользователя'),
     )
     
     # For connecting to tne db table.
@@ -81,10 +84,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class Zone(models.Model):
     # Relations.
-    created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='zones', null=True, blank=True)
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='zones', null=True, blank=True)
+    created_by = models.ForeignKey(User, verbose_name="Создано", on_delete=models.PROTECT, related_name='zones', null=True, blank=True)
+    location = models.ForeignKey(Location, verbose_name="Объект", on_delete=models.CASCADE, related_name='zones', null=True, blank=True)
 
-    zone_name = models.CharField(max_length=255)
+    zone_name = models.CharField(verbose_name="Название зоны", max_length=255)
 
     def __str__(self):
         return self.zone_name
@@ -92,15 +95,15 @@ class Zone(models.Model):
 
 class Mark(models.Model):
     # Relations.
-    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='marks')
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='marks')
+    zone = models.ForeignKey(Zone, verbose_name = 'Зона', on_delete=models.CASCADE, related_name='marks')
+    user = models.ForeignKey(User, verbose_name = 'Пользователь', on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
+    location = models.ForeignKey(Location, verbose_name = 'Объект', on_delete=models.CASCADE, null=True, blank=True, related_name='marks')
 
     # TODO: Use mark_range_min and mark_range_max from Location (seems hard to implement atm).
     MARK_CHOICES = [(i, i) for i in range(0, 6)]
-    mark = models.SmallIntegerField(choices=MARK_CHOICES)
-    is_approved = models.BooleanField(default=False)
-    last_modified = models.DateTimeField(auto_now=True)
+    mark = models.SmallIntegerField(verbose_name = 'Оценка', choices=MARK_CHOICES)
+    is_approved = models.BooleanField(verbose_name = 'Подтверждение', default=False)
+    last_modified = models.DateTimeField(verbose_name = 'Последние изменение', auto_now=True)
 
     def __str__(self):
         display_string = f'[{self.location}] {self.zone}: {self.mark} '
@@ -113,16 +116,16 @@ class Mark(models.Model):
 
 class Comment(models.Model):
     # Relations.
-    zone = models.ForeignKey(Zone, on_delete=models.CASCADE, related_name='comments')
-    user = models.ForeignKey(User, on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='comments')
-    location = models.ForeignKey(Location, on_delete=models.CASCADE, null=True, blank=True, related_name='comments')
+    zone = models.ForeignKey(Zone, verbose_name = 'Зона', on_delete=models.CASCADE, related_name='comments')
+    user = models.ForeignKey(User, verbose_name = 'Пользователь', on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='comments')
+    location = models.ForeignKey(Location, verbose_name = 'Объект', on_delete=models.CASCADE, null=True, blank=True, related_name='comments')
 
-    is_made_by_customer_not_contractor = models.BooleanField()
-    comment = models.TextField(blank=True)
-    allocated_time = models.TimeField(default=timezone.now)
+    is_made_by_customer_not_contractor = models.BooleanField(verbose_name='Это сделано Заказчиком, а не Исполнителем')
+    comment = models.TextField(verbose_name = 'Комментарий', blank=True)
+    allocated_time = models.TimeField(verbose_name = 'Время', default=timezone.now)
 
-    photo = models.ImageField(upload_to='./attachments/', null=True, blank=True)
-    last_modified = models.DateTimeField(auto_now=True)
+    photo = models.ImageField(upload_to='./attachments/', verbose_name = 'Фото', null=True, blank=True)
+    last_modified = models.DateTimeField(verbose_name = 'Последение изменение',auto_now=True)
 
     def __str__(self):
         display_string = f'[{self.location}] {self.zone}: '

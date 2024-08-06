@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin 
+from django.contrib.auth.admin import UserAdmin
 from .models import Location, User, Zone, Mark, Comment
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 
@@ -9,21 +9,28 @@ class AdminPanel(UserAdmin):
     add_form = CustomUserCreationForm
 
     # These fields are displayed on the admin page.
-    list_display = ('username', 'is_staff', 'is_active')
-    list_filter = ('is_staff', 'is_active')
+    list_display = ('username', 'is_staff', 'is_active', 'role')
+    list_filter = ('is_staff', 'is_active', 'role')
     fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('Permissions', {'fields': ('is_staff', 'is_active')}),
+        (None, {'fields': ('username', 'password', 'role')}),
+        ('Доступы', {'fields': ('is_staff', 'is_active')}),
     )
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'password1', 'password2', 'is_staff', 'is_active'),
+            'fields': ('username', 'password1', 'password2', 'role', 'is_staff', 'is_active'),
         }),
     )
     search_fields = ('username',)
     ordering = ('username',)
     filter_horizontal = ()
+
+    # Adding the action to activate users
+    actions = ['activate_users']
+
+    def activate_users(self, request, queryset):
+        queryset.update(is_active=True)
+    activate_users.short_description = 'Активировать выбранных пользователей'
 
 admin.site.register(User, AdminPanel)
 admin.site.register(Location)

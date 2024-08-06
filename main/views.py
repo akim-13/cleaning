@@ -32,12 +32,16 @@ def register_view(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
+            # Do not save the user yet
+            user = form.save(commit=False) 
+            # Ensure the user is inactive
+            user.is_active = False  
+            # Now save the user
+            user.save()  
             role = form.cleaned_data.get('role')
             group = Group.objects.get(name=role)
             user.groups.add(group)
-            login(request, user)
-            return redirect('main')
+            return redirect('/')
     else:
         form = CustomUserCreationForm()
     return render(request, 'main/register.html', {'form': form})
