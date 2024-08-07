@@ -19,7 +19,7 @@ document.getElementById("markForm").addEventListener("submit", (event) => {
             console.error(data.error);
             return;
         }
-        // TODO: Save data in the db.
+        // Idk what this is for. Just leave it for now.
         console.log(data.location + ' ' + data.zone + ' ' + data.mark + ' ' + data.is_approved);
     })
         .catch(error => console.error('Error:', error));
@@ -91,3 +91,19 @@ function submitForms() {
     lastTimeCell.setAttribute('end-time', `${unixTimestamp}`);
     lastTimeCell.setAttribute('time-period-ended', 'true');
 }
+const locationName = JSON.parse(document.getElementById('location-name').textContent);
+const locationSocket = new WebSocket('ws://'
+    + window.location.host
+    + '/fill-out/'
+    + locationName
+    + '/');
+locationSocket.onopen = function (event) {
+    console.log('Connection opened');
+};
+locationSocket.onmessage = function (event) {
+    console.log('message received');
+    console.log(event.data);
+};
+locationSocket.onclose = function (event) {
+    console.error('Connection closed unexpectedly');
+};

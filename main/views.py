@@ -1,4 +1,3 @@
-from logger import d, i, w, e
 from .forms import CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
 from .models import Location, User, Zone, Mark, Comment
 from django.contrib.auth.decorators import login_required
