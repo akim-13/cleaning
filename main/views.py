@@ -55,8 +55,9 @@ def fill_out(request, location):
 
         if request_is_ajax and request.POST.get('action') == 'append_row':
             form = MarkForm()
+            form_id = request.POST.get('FormId')
             return JsonResponse({
-                'new_row_html': render_to_string('main/_new_row.html', {'form': form})
+                'new_row_html': render_to_string('main/_new_row.html', {'form': form, 'form_id': form_id})
             })
         
         form = MarkForm(request.POST)

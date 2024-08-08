@@ -1,7 +1,10 @@
-<tr>
-    <td>{{ form.zone }}</td>
-    <td>{{ form.mark }}</td>
-    <td>{{ form.is_approved }}</td>
-    <td></td>
-    <td></td>
-</tr>
+<form id="{{ form_UID }}" method="POST">
+    {% csrf_token %}
+    <tr>
+        <td>{{ form.zone }}</td>
+        <td>{{ form.mark }}</td>
+        <td>{{ form.is_approved }}</td>
+        <td></td>
+        <td></td>
+    </tr>
+</form>
