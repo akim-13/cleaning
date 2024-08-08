@@ -62,34 +62,14 @@
     </tr>
     
 </table>
+
 <button type="button" onclick="submitForms()">Готово</button>
-<br>
 
-<input id="chat-message-input" type="text" size="100"><br>
-<input id="chat-message-submit" type="button" value="Send">
-
-
+<!-- NOTE: Needed by `fill_out.ts`. -->
 <!-- Same as `<script id="location-name"> {{location}} </script>`. -->
 {{ location | json_script:"location-name" }}
 
 <script src="{% static 'main/js/fill_out.js' %}"></script>
-<script>
-     document.querySelector('#chat-message-input').focus();
-        document.querySelector('#chat-message-input').onkeyup = function(e) {
-            if (e.key === 'Enter') {  // enter, return
-                document.querySelector('#chat-message-submit').click();
-            }
-        };
-
-        document.querySelector('#chat-message-submit').onclick = function(e) {
-            const messageInputDom = document.querySelector('#chat-message-input');
-            const message = messageInputDom.value;
-            locationSocket.send(JSON.stringify({
-                'message': message
-            }));
-            messageInputDom.value = '';
-        };
-</script>
 
 </body>
 </html>

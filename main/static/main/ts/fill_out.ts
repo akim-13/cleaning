@@ -1,23 +1,31 @@
+/*
+    INFO: How to change HTML for all users in real-time.
+    
+    1. [fill_out.ts] Send a request to consumer using `locationSocket.send()`.
+    2. [consumers.py] Receive the request and generate new HTML.
+    3. [eg_template.html] Render HTML if necessary (e.g. if it contains django template tags).
+    4. [consumers.py] Broadcast the HTML to a location group.
+    5. [consumers.py] Send the new HTML to WebSocket using `self.send()`.
+    6. [fill_out.ts] Receive the new HTML from WebSocket using `locationSocket.onmessage`.
+    7. [fill_out.ts] Change the HTML.
+*/
+
 const locationName = JSON.parse(document.getElementById('location-name')!.textContent!);
 
-const locationSocket = new WebSocket(
-    'ws://'
-    + window.location.host
-    + '/fill-out/'
-    + locationName
-    + '/'
-)
+const locationSocket = new WebSocket(`ws://${window.location.host}/fill-out/${locationName}/`);
 
 locationSocket.onopen = function(event) {
     console.log('Connection opened');
 }
 
 locationSocket.onmessage = function(event) {
-    console.log('message received');
+    console.log('Message received');
 
     const data = JSON.parse(event.data);
     if ('new_row_html' in data) {
         appendNewRowHtml(data.new_row_html);
+    } else if ('change_time_period_request' in data) {
+        changeLastTimeCellHtml();
     }
 }
 
@@ -41,10 +49,24 @@ function submitForms(): void {
         form.dispatchEvent(event);
     });
 
+    sendChangeTimePeriodRequest();
+}
+
+
+function sendChangeTimePeriodRequest(): void {
+    locationSocket.send(JSON.stringify({
+        'requested_action': 'change_time_period'
+    }));
+}
+
+
+function changeLastTimeCellHtml(): void {
     const lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
-    if (!lastTimeCell.hasAttribute('end-time')) {
-        lastTimeCell.innerHTML += ` - ${generateCurrentFormattedTime()}`;
+    if (lastTimeCell.hasAttribute('end-time')) {
+        return;
     }
+
+    lastTimeCell.innerHTML += ` - ${generateCurrentFormattedTime()}`;
     const unixTimestamp = generateUnixTimestamp();
     lastTimeCell.setAttribute('end-time', `${unixTimestamp}`);
     lastTimeCell.setAttribute('time-period-ended', 'true');
@@ -52,12 +74,6 @@ function submitForms(): void {
 
 
 function sendAppendRowRequest(): void {
-    // locationSocket.send() a request to consumer to append a new row.
-    // Inside consumer's `receive`, use render_to_string and _new_row.html template to render the row
-    // consumer sends it to group
-    // group send it to WebSocket
-    // websocket.onmessage receives it and appends it to the table
-
     const formUID = Date.now();
     locationSocket.send(JSON.stringify({
         'requested_action': 'append_row',
