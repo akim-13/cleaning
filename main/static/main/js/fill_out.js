@@ -3,12 +3,12 @@
     INFO: How to change HTML for all users in real-time.
     
     1. [fill_out.ts] Send a request to consumer using `locationSocket.send()`.
-    2. [consumers.py] Receive the request and generate new HTML.
-    3. [eg_template.html] Render HTML if necessary (e.g. if it contains django template tags).
+    2. [consumers.py] Inside `receive()`, handle the request and generate new HTML if necessary.
+    3. [eg_template.html] Render the HTML if necessary (e.g. if it contains django template tags).
     4. [consumers.py] Broadcast the HTML to a location group.
-    5. [consumers.py] Send the new HTML to WebSocket using `self.send()`.
-    6. [fill_out.ts] Receive the new HTML from WebSocket using `locationSocket.onmessage`.
-    7. [fill_out.ts] Change the HTML.
+    5. [consumers.py] Send the HTML to WebSocket using `self.send()`.
+    6. [fill_out.ts] Receive the HTML from WebSocket using `locationSocket.onmessage()`.
+    7. [fill_out.ts] Change the HTML of the page.
 */
 const locationName = JSON.parse(document.getElementById('location-name').textContent);
 const locationSocket = new WebSocket(`ws://${window.location.host}/fill-out/${locationName}/`);
@@ -18,11 +18,29 @@ locationSocket.onopen = function (event) {
 locationSocket.onmessage = function (event) {
     console.log('Message received');
     const data = JSON.parse(event.data);
-    if ('new_row_html' in data) {
-        appendNewRowHtml(data.new_row_html);
-    }
-    else if ('change_time_period_request' in data) {
-        changeLastTimeCellHtml();
+    const requestedAction = data['requested_action'];
+    switch (requestedAction) {
+        case 'request_current_page_contents':
+            locationSocket.send(JSON.stringify({
+                'requested_action': 'send_current_page_contents',
+                'current_page_contents': document.documentElement.innerHTML,
+                'requester': data.requester
+            }));
+            break;
+        case 'send_current_page_contents':
+            locationSocket.send(JSON.stringify({
+                'requested_action': 'update_current_page_contents',
+                'current_page_contents': data.current_page_contents
+            }));
+        case 'update_current_page_contents':
+            document.documentElement.innerHTML = data.current_page_contents;
+            break;
+        case 'append_row':
+            appendNewRowHtml(data.new_row_html);
+            break;
+        case 'change_time_period':
+            changeLastTimeCellHtml();
+            break;
     }
 };
 locationSocket.onclose = function (event) {
