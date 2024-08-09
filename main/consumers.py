@@ -1,4 +1,4 @@
-import json
+import json, redis
 from threading import Event, Thread
 from collections import defaultdict
 from asgiref.sync import async_to_sync
@@ -9,8 +9,7 @@ from .forms import CustomUserCreationForm, CustomAuthenticationForm, MarkForm, C
 # NOTE: Channels needs a Redis server. To run it, run:
 # sudo docker run --rm -p 6379:6379 redis:7
 
-# Dict of the form `{ location_name: [websocket_channel_name1, websocket_channel_name2, ...], ... }`.
-active_users = defaultdict(list)
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 class FillOutConsumer(WebsocketConsumer):
     def connect(self):
@@ -21,11 +20,11 @@ class FillOutConsumer(WebsocketConsumer):
             self.group_name_location, self.channel_name
         )
 
-        self.accept()
+        self.accept() 
 
-        group_has_active_users = active_users[self.group_name_location]
+        group_has_active_users = redis_client.scard(f'active_users:{self.group_name_location}') > 0        
         if group_has_active_users:
-            active_user = active_users[self.group_name_location][0]
+            active_user = redis_client.srandmember(f'active_users:{self.group_name_location}').decode('utf-8')
 
             async_to_sync(self.channel_layer.send)(
                 active_user, {
@@ -38,7 +37,7 @@ class FillOutConsumer(WebsocketConsumer):
             update_current_page_contents_thread = Thread(target=self.update_current_page_contents)
             update_current_page_contents_thread.start()
 
-        active_users[self.group_name_location].append(self.channel_name)
+        redis_client.sadd(f'active_users:{self.group_name_location}', self.channel_name)
 
 
     def update_current_page_contents(self):
@@ -58,11 +57,11 @@ class FillOutConsumer(WebsocketConsumer):
             self.group_name_location, self.channel_name
         )
 
-        active_users[self.group_name_location].remove(self.channel_name)
+        redis_client.srem(f'active_users:{self.group_name_location}', self.channel_name)
 
-        group_is_empty = not active_users[self.group_name_location]
+        group_is_empty = redis_client.scard(f'active_users:{self.group_name_location}') == 0
         if group_is_empty:
-            del active_users[self.group_name_location]
+            redis_client.delete(f'active_users:{self.group_name_location}')
 
 
     # Receive message from WebSocket.

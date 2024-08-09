@@ -6,6 +6,9 @@ from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
 from django.http import Http404, JsonResponse
 from django.db.models import Q
+import redis
+
+redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
 def login_view(request):
     # If something has been filled and submitted. 
@@ -49,7 +52,14 @@ def main(request):
 def fill_out(request, location):
     if not Location.objects.filter(location_name=location).exists():
         raise Http404('Локация не найдена')
-        
+
+    multiple_active_users_are_present = redis_client.scard(f'active_users:{location}') > 1
+    if multiple_active_users_are_present:
+        return render(request, 'main/fill_out.html', {
+            'multiple_active_users_are_present': True,
+            'location': location
+        })
+
     if request.method == 'POST':
         request_is_ajax = request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
 
@@ -110,7 +120,7 @@ def fill_out(request, location):
     context = {
         'rows': rows,
         'form': form,
-        'location': location
+        'location': location,
     }
 
     return render(request, 'main/fill_out.html', context)

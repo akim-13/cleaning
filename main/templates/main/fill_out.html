@@ -9,6 +9,11 @@
 
 <body>
 
+{% if multiple_active_users_are_present %}
+<!--If there are active users, hide the default content to avoid flickering. 
+    The required content will be fetched from an active user via WebSockets. -->
+{% else %}
+
 <h1>Форма качества уборки</h1>
 
 <table id="table-id">
@@ -63,6 +68,8 @@
 </table>
 
 <button type="button" onclick="submitForms()">Готово</button>
+
+{% endif %}
 
 <!-- NOTE: Needed by `fill_out.ts`. -->
 <!-- Same as `<script id="location-name"> {{location}} </script>`. -->
