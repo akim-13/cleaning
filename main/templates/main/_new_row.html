@@ -1,10 +1,37 @@
-<form id="{{ form_UID }}" method="POST">
-    {% csrf_token %}
-    <tr>
-        <td>{{ form.zone }}</td>
-        <td>{{ form.mark }}</td>
-        <td>{{ form.is_approved }}</td>
-        <td></td>
-        <td></td>
-    </tr>
-</form>
+<tr>
+
+<td>
+    <select id="zones-select" name="zones[]" required>
+        <option value="" selected>-------</option>
+        {% for choice in form.zone.field.queryset %}
+        <option value="{{ choice.pk }}" {% if form.zone.value == choice.pk %}selected{% endif %}>
+            {{ choice }}
+        </option>
+        {% endfor %}
+    </select>
+</td>
+
+<td>
+    <select id="marks-select" name="marks[]" title="Mark" required>
+        <option value="" selected>-------</option>
+        {% for value, label in form.mark.field.choices %}
+        <option value="{{ value }}" {% if form.mark.value == value %}selected{% endif %}>
+            {{ label }}
+        </option>
+        {% endfor %}
+    </select>
+</td>
+
+<td>
+    <input id="approvals-checkbox" type="checkbox" name="approvals[]" required {% if form.is_approved.value %}checked{% endif %}>
+</td>
+
+<td>
+    <textarea id="customer-comments-textarea" name="customer_comments[]">{% if form.customer_comment.value %}{{form.customer_comment.value}}{% endif %}</textarea>
+</td>
+
+<td>
+    <textarea id="contractor-comments-textarea" name="contractor_comments[]">{% if form.contractor_comment.value %}{{form.contractor_comment.value}}{% endif %}</textarea>
+</td>
+
+</tr>

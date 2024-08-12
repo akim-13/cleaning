@@ -1,4 +1,4 @@
-from .forms import CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
+from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
 from .models import Location, User, Zone, Mark, Comment
 from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
@@ -48,11 +48,35 @@ def main(request):
     return render(request, 'main/main.html')
 
 
+def get_form_data_row_by_row(data, row_num):
+    form_data = {}
+    for key, values in data.items():
+        match key:
+            case 'csrfmiddlewaretoken':
+                form_data['csrfmiddlewaretoken'] = values[0]
+                continue
+            case 'zones[]':
+                form_data['zone'] = values[row_num]
+            case 'marks[]':
+                form_data['mark'] = values[row_num]
+            case 'approvals[]':
+                form_data['is_approved'] = values[row_num]
+            case 'customer_comments[]':
+                form_data['customer_comment'] = values[row_num]
+            case 'contractor_comments[]':
+                form_data['contractor_comment'] = values[row_num]
+
+    return form_data
+
+
+# TODO: Untested! Especially the form submission part. Write thorough tests.
 @login_required
 def fill_out(request, location):
     if not Location.objects.filter(location_name=location).exists():
         raise Http404('Локация не найдена')
 
+    # Do not render the page if there are multiple active users.
+    # Instead, fetch the data from an active user via WebSockets (see `FillOutConsumer`).
     multiple_active_users_are_present = redis_client.scard(f'active_users:{location}') > 1
     if multiple_active_users_are_present:
         return render(request, 'main/fill_out.html', {
@@ -61,36 +85,28 @@ def fill_out(request, location):
         })
 
     if request.method == 'POST':
-        request_is_ajax = request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
+        data = dict(request.POST)
 
-        if request_is_ajax and request.POST.get('action') == 'append_row':
-            form = MarkForm()
-            form_id = request.POST.get('FormId')
-            return JsonResponse({
-                'new_row_html': render_to_string('main/_new_row.html', {'form': form, 'form_id': form_id})
-            })
-        
-        form = MarkForm(request.POST)
-        if form.is_valid():
-            mark = form.save(commit=False)
-            mark.user = request.user
-            mark.save()
-
-            if request_is_ajax:
-                return JsonResponse({
-                    'location': location,
-                    'zone': mark.zone.zone_name,
-                    'mark': mark.mark,
-                    'is_approved': mark.is_approved,
-                })
-
-            # For non-AJAX requests, redirect to the same page.
+        no_new_rows_added = data.get('zones[]') is None
+        if no_new_rows_added:
             return redirect('fill_out', location=location)
+            
+        num_of_rows = len(data['zones[]'])
+        for row_num in range(num_of_rows):
+            row_form_data = get_form_data_row_by_row(data, row_num)
+            form = FillOutForm(row_form_data)
 
-        if request_is_ajax:
-            return JsonResponse({'error': 'Bad form request'}, status=400)
+            if form.is_valid():
+                form.save(user=request.user, location=location)
+                return redirect('fill_out', location=location)
+
+            # TODO: Figure out what to do if the form is not valid.
+            # TODO: Implement actual logging.
+            print('Form is not valid')
+            print(form.errors)
+
     else:
-        form = MarkForm()
+        form = FillOutForm()
 
     # Get all the zones for the location.
     zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)

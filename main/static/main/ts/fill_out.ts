@@ -69,13 +69,11 @@ function generateUnixTimestamp(): number {
 }
 
 
-function submitForms(): void {
-    document.querySelectorAll('form').forEach(form => {
-        const event = new Event('submit');
-        form.dispatchEvent(event);
-    });
-
-    sendChangeTimePeriodRequest();
+document.getElementById('form-id')!.onsubmit = event => {
+    const newRowsAdded = document.getElementById('zones-select')
+    if (newRowsAdded) {
+        sendChangeTimePeriodRequest();
+    }
 }
 
 

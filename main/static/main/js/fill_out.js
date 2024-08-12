@@ -52,13 +52,12 @@ function generateCurrentFormattedTime() {
 function generateUnixTimestamp() {
     return Math.floor(Date.now() / 1000);
 }
-function submitForms() {
-    document.querySelectorAll('form').forEach(form => {
-        const event = new Event('submit');
-        form.dispatchEvent(event);
-    });
-    sendChangeTimePeriodRequest();
-}
+document.getElementById('form-id').onsubmit = event => {
+    const newRowsAdded = document.getElementById('zones-select');
+    if (newRowsAdded) {
+        sendChangeTimePeriodRequest();
+    }
+};
 function sendChangeTimePeriodRequest() {
     locationSocket.send(JSON.stringify({
         'requested_action': 'change_time_period'

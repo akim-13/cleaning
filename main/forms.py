@@ -33,6 +33,63 @@ class CustomAuthenticationForm(AuthenticationForm):
         fields = ('username', 'password')
 
 
+class FillOutForm(forms.Form):
+    # TODO: Use zones for the specific location.
+    zone = forms.ModelChoiceField(queryset=Zone.objects.all())
+    mark = forms.ChoiceField(choices=Mark.MARK_CHOICES)
+    is_approved = forms.BooleanField()
+    customer_comment = forms.CharField()
+    contractor_comment = forms.CharField()
+
+    def clean(self):
+        cleaned_data = super().clean()
+        zone = cleaned_data.get('zone')
+        mark = cleaned_data.get('mark')
+        is_approved = cleaned_data.get('is_approved')
+
+        if zone is None:
+            raise forms.ValidationError('Zone is required')
+        if mark is None:
+            raise forms.ValidationError('Mark is required')
+        if not is_approved:
+            raise forms.ValidationError('Approval is required')
+
+        return cleaned_data
+
+    def save(self, user, location):
+        zone = self.cleaned_data['zone']
+
+        mark = Mark(
+            zone=zone,
+            user=user,
+            location=Location.objects.get(location_name=location),
+            mark=self.cleaned_data['mark'],
+            is_approved=self.cleaned_data['is_approved']
+        )
+        mark.save()
+
+        if self.cleaned_data['customer_comment']:
+            customer_comment = Comment(
+                zone=zone,
+                user=user,
+                location=Location.objects.get(location_name=location),
+                comment=self.cleaned_data['customer_comment'],
+                is_made_by_customer_not_contractor=True
+            )
+            customer_comment.save()
+
+        if self.cleaned_data['contractor_comment']:
+            contractor_comment = Comment(
+                zone=zone,
+                user=user,
+                location=Location.objects.get(location_name=location),
+                comment=self.cleaned_data['contractor_comment'],
+                is_made_by_customer_not_contractor=False
+            )
+            contractor_comment.save()
+
+
+
 class MarkForm(forms.ModelForm):
     class Meta:
         model = Mark

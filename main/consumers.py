@@ -4,7 +4,7 @@ from collections import defaultdict
 from asgiref.sync import async_to_sync
 from django.template.loader import render_to_string
 from channels.generic.websocket import WebsocketConsumer
-from .forms import CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
+from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
 
 # NOTE: Channels needs a Redis server. To run it, run:
 # sudo docker run --rm -p 6379:6379 redis:7
@@ -106,8 +106,9 @@ class FillOutConsumer(WebsocketConsumer):
         async_to_sync(self.channel_layer.group_send)(self.group_name_location, data)
 
 
+    # TODO: Get rid of form_UID.
     def generate_new_row_html(self, form_UID):
-        form = MarkForm()
+        form = FillOutForm()
         return render_to_string('main/_new_row.html', {'form': form, 'form_UID': form_UID})
 
 

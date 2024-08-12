@@ -11,10 +11,13 @@
 
 {% if multiple_active_users_are_present %}
 <!--If there are active users, hide the default content to avoid flickering. 
-    The required content will be fetched from an active user via WebSockets. -->
+    The required content will be fetched from an active user via WebSockets. (see `FillOutConsumer`). -->
 {% else %}
 
 <h1>Форма качества уборки</h1>
+
+<form id="form-id" action="{% url 'fill_out' location %}" method="POST">
+{% csrf_token %}
 
 <table id="table-id">
     <tr>
@@ -67,7 +70,9 @@
     
 </table>
 
-<button type="button" onclick="submitForms()">Готово</button>
+<button type="submit">Готово</button>
+</form>
+
 
 {% endif %}
 
