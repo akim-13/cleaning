@@ -1,4 +1,5 @@
 import json, redis
+from uuid import uuid4
 from threading import Event, Thread
 from collections import defaultdict
 from asgiref.sync import async_to_sync
@@ -87,13 +88,14 @@ class FillOutConsumer(WebsocketConsumer):
                     self.update_current_page_contents_event.set()
 
             case 'append_row':
-                form_UID = received_json_data['form_UID']
-                new_row_html = self.generate_new_row_html(form_UID)
+                row_UUID = str(uuid4())
+                new_row_html = self.generate_new_row_html(row_UUID)
 
                 self.broadcast_data_to_location_group({
                     # `type` calls the specified function.
                     'type': 'send_new_row_to_websocket',
-                    'new_row_html': new_row_html
+                    'new_row_html': new_row_html,
+                    'row_UUID': row_UUID
                 })
             
             case 'change_time_period':
@@ -101,22 +103,34 @@ class FillOutConsumer(WebsocketConsumer):
                     'type': 'send_change_time_period_request_to_websocket'
                 })
 
+            case 'field_change':
+                row_UUID = received_json_data['row_UUID']
+                field_name = received_json_data['field_name']
+                field_value = received_json_data['field_value']
+                self.broadcast_data_to_location_group({
+                    'type': 'send_field_change_to_websocket',
+                    'row_UUID': row_UUID,
+                    'field_name': field_name,
+                    'field_value': field_value
+                })
+
 
     def broadcast_data_to_location_group(self, data):
         async_to_sync(self.channel_layer.group_send)(self.group_name_location, data)
 
 
-    # TODO: Get rid of form_UID.
-    def generate_new_row_html(self, form_UID):
+    def generate_new_row_html(self, row_UUID):
         form = FillOutForm()
-        return render_to_string('main/_new_row.html', {'form': form, 'form_UID': form_UID})
+        return render_to_string('main/_new_row.html', {'form': form, 'row_UUID': row_UUID})
 
 
     def send_new_row_to_websocket(self, event):
         new_row_html = event['new_row_html']
+        row_UUID = event['row_UUID']
         self.send(text_data=json.dumps({
             'requested_action': 'append_row',
-            'new_row_html': new_row_html
+            'new_row_html': new_row_html,
+            'row_UUID': row_UUID
         }))
 
     
@@ -135,4 +149,16 @@ class FillOutConsumer(WebsocketConsumer):
         self.send(text_data=json.dumps({
             'requested_action': 'send_current_page_contents',
             'current_page_contents': current_page_contents,
+        }))
+
+    def send_field_change_to_websocket(self, event):
+        row_UUID = event['row_UUID']
+        field_name = event['field_name']
+        field_value = event['field_value']
+
+        self.send(text_data=json.dumps({
+            'requested_action': 'field_change',
+            'row_UUID': row_UUID,
+            'field_name': field_name,
+            'field_value': field_value
         }))

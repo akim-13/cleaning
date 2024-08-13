@@ -44,11 +44,29 @@ locationSocket.onmessage = function(event) {
             break;
 
         case 'append_row':
-            appendNewRowHtml(data.new_row_html);
+            appendNewRowHtml(data.new_row_html, data.row_UUID);
             break;
 
         case 'change_time_period':
             changeLastTimeCellHtml();
+            break;
+
+        case 'field_change':
+            const row = document.getElementById(data.row_UUID) as HTMLTableRowElement;
+            const fieldName = data.field_name;
+            const fieldValue = data.field_value;
+            const target = row.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
+
+            if (fieldName === 'approvals[]') {
+                if (fieldValue === 'on') {
+                    target.checked = true;
+                } else {
+                    target.checked = false;
+                }
+            } else {
+                target.value = fieldValue;
+            }
+
             break;
     }
 }
@@ -70,7 +88,7 @@ function generateUnixTimestamp(): number {
 
 
 document.getElementById('form-id')!.onsubmit = event => {
-    const newRowsAdded = document.getElementById('zones-select')
+    const newRowsAdded = document.getElementById('zones[]')
     if (newRowsAdded) {
         sendChangeTimePeriodRequest();
     }
@@ -106,7 +124,7 @@ function sendAppendRowRequest(): void {
 }   
 
 
-function appendNewRowHtml(newRowHtml: string): void {
+function appendNewRowHtml(newRowHtml: string, row_UUID: string): void {
     const table = document.getElementById('table-id') as HTMLTableElement;
 
     // Append new row.
@@ -116,6 +134,36 @@ function appendNewRowHtml(newRowHtml: string): void {
         lastRow.insertAdjacentHTML('beforebegin', newRowHtml);
     } else {
         table.insertAdjacentHTML('beforeend', newRowHtml);
+    }
+
+    const row = document.getElementById(row_UUID) as HTMLTableRowElement;
+
+    row.querySelector('[name="zones[]"]')!.addEventListener('change', updateFieldForEveryone);
+    row.querySelector('[name="marks[]"]')!.addEventListener('change', updateFieldForEveryone);
+    row.querySelector('[name="approvals[]"]')!.addEventListener('change', updateFieldForEveryone);
+    row.querySelector('[name="customer_comments[]"]')!.addEventListener('input', updateFieldForEveryone);
+    row.querySelector('[name="contractor_comments[]"]')!.addEventListener('input', updateFieldForEveryone);
+
+    function updateFieldForEveryone(event: Event) {
+        const target = event.target as HTMLInputElement;
+        const fieldName = target.name;
+        let fieldValue = target.value;
+        
+        if (fieldName === 'approvals[]') {
+            const checkbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
+            if (checkbox.checked) {
+                fieldValue = 'on';
+            } else {
+                fieldValue = 'off';
+            }
+        }
+
+        locationSocket.send(JSON.stringify({
+            'requested_action': 'field_change',
+            'row_UUID': row_UUID,
+            'field_name': fieldName,
+            'field_value': fieldValue
+        }));
     }
     
     const lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;

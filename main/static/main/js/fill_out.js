@@ -36,10 +36,27 @@ locationSocket.onmessage = function (event) {
             document.documentElement.innerHTML = data.current_page_contents;
             break;
         case 'append_row':
-            appendNewRowHtml(data.new_row_html);
+            appendNewRowHtml(data.new_row_html, data.row_UUID);
             break;
         case 'change_time_period':
             changeLastTimeCellHtml();
+            break;
+        case 'field_change':
+            const row = document.getElementById(data.row_UUID);
+            const fieldName = data.field_name;
+            const fieldValue = data.field_value;
+            const target = row.querySelector(`[name="${fieldName}"]`);
+            if (fieldName === 'approvals[]') {
+                if (fieldValue === 'on') {
+                    target.checked = true;
+                }
+                else {
+                    target.checked = false;
+                }
+            }
+            else {
+                target.value = fieldValue;
+            }
             break;
     }
 };
@@ -53,7 +70,7 @@ function generateUnixTimestamp() {
     return Math.floor(Date.now() / 1000);
 }
 document.getElementById('form-id').onsubmit = event => {
-    const newRowsAdded = document.getElementById('zones-select');
+    const newRowsAdded = document.getElementById('zones[]');
     if (newRowsAdded) {
         sendChangeTimePeriodRequest();
     }
@@ -80,7 +97,7 @@ function sendAppendRowRequest() {
         'form_UID': formUID
     }));
 }
-function appendNewRowHtml(newRowHtml) {
+function appendNewRowHtml(newRowHtml, row_UUID) {
     const table = document.getElementById('table-id');
     // Append new row.
     // NOTE: This is a workaround, `insertBefore` doesn't work for some reason.
@@ -90,6 +107,32 @@ function appendNewRowHtml(newRowHtml) {
     }
     else {
         table.insertAdjacentHTML('beforeend', newRowHtml);
+    }
+    const row = document.getElementById(row_UUID);
+    row.querySelector('[name="zones[]"]').addEventListener('change', updateFieldForEveryone);
+    row.querySelector('[name="marks[]"]').addEventListener('change', updateFieldForEveryone);
+    row.querySelector('[name="approvals[]"]').addEventListener('change', updateFieldForEveryone);
+    row.querySelector('[name="customer_comments[]"]').addEventListener('input', updateFieldForEveryone);
+    row.querySelector('[name="contractor_comments[]"]').addEventListener('input', updateFieldForEveryone);
+    function updateFieldForEveryone(event) {
+        const target = event.target;
+        const fieldName = target.name;
+        let fieldValue = target.value;
+        if (fieldName === 'approvals[]') {
+            const checkbox = row.querySelector('[name="approvals[]"]');
+            if (checkbox.checked) {
+                fieldValue = 'on';
+            }
+            else {
+                fieldValue = 'off';
+            }
+        }
+        locationSocket.send(JSON.stringify({
+            'requested_action': 'field_change',
+            'row_UUID': row_UUID,
+            'field_name': fieldName,
+            'field_value': fieldValue
+        }));
     }
     const lastTimeCell = document.getElementById('last-time-cell');
     if (lastTimeCell.getAttribute('time-period-ended') === 'true') {
