@@ -4,16 +4,22 @@ class MainConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'main'
 
-    # When the application is ready, it ensures the groups are created
     def ready(self):
         from django.contrib.auth.models import Group
-        roles = [
-            ('manager_contractor', 'Менеджер Исполнитель'),
-            ('manager_customer', 'Менеджер Заказчик'),
-            ('representative_customer', 'Руководитель Объекта'),
-            ('representative_contractor', 'Руководитель Клининга'),
-            ('admin_account', 'Админ Аккаунт'),
-        ]
+        from django.db.utils import OperationalError, ProgrammingError
 
-        for role_name, _ in roles:
-            Group.objects.get_or_create(name=role_name)
+        try:
+            roles = [
+                ('manager_contractor', 'Менеджер Исполнитель'),
+                ('manager_customer', 'Менеджер Заказчик'),
+                ('representative_customer', 'Руководитель Объекта'),
+                ('representative_contractor', 'Руководитель Клининга'),
+                ('admin_account', 'Админ Аккаунт'),
+            ]
+
+            for role_name, _ in roles:
+                Group.objects.get_or_create(name=role_name)
+
+        except (OperationalError, ProgrammingError):
+            # If the database isn't ready yet, we'll skip creating groups for now.
+            pass

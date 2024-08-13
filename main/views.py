@@ -38,6 +38,8 @@ def register_view(request):
             user.is_active = False  
             # Now save the user
             user.save()  
+            # Important for saving ManyToMany relationships
+            form.save_m2m()  
             role = form.cleaned_data.get('role')
             group = Group.objects.get(name=role)
             user.groups.add(group)

@@ -44,13 +44,14 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('manager_customer', 'Менеджер Заказчик'),
         ('representative_customer', 'Руководитель Объекта'),
         ('representative_contractor', 'Руководитель Клининга'),
-        ('admin_account', 'Админ Аккаунт'),
     ]
+    
     username = models.CharField(verbose_name="Логин",max_length=255, unique=True)
     password = models.CharField(verbose_name="Пароль", max_length=255)
     is_active = models.BooleanField(verbose_name="Активен", default=True)
     is_staff = models.BooleanField(verbose_name="Админ", default=False)
     role = models.CharField(verbose_name = 'Роль', max_length=55, choices = ROLES_CHOICES, default = 'manager_customer')
+    location = models.ManyToManyField(Location, verbose_name='Объекты', related_name='users', blank=True)
 
     objects = CustomUserManager()
 
