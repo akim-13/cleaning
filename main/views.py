@@ -54,7 +54,10 @@ def get_form_data_row_by_row(data, row_num):
         match key:
             case 'csrfmiddlewaretoken':
                 form_data['csrfmiddlewaretoken'] = values[0]
-                continue
+            case 'submission_timestamp':
+                form_data['submission_timestamp'] = values[0]
+            case 'creation_timestamps[]':
+                form_data['creation_timestamp'] = values[row_num]
             case 'zones[]':
                 form_data['zone'] = values[row_num]
             case 'marks[]':
@@ -69,7 +72,7 @@ def get_form_data_row_by_row(data, row_num):
     return form_data
 
 
-def handle_post_request(request, location):
+def handle_POST_request(request, location):
     data = dict(request.POST)
 
     no_new_rows_added = data.get('zones[]') is None
@@ -79,10 +82,11 @@ def handle_post_request(request, location):
     num_of_rows = len(data['zones[]'])
     for row_num in range(num_of_rows):
         row_form_data = get_form_data_row_by_row(data, row_num)
-        form = FillOutForm(row_form_data)
+        print('row_form_data', row_form_data)
+        form = FillOutForm(row_form_data, location=location)
 
         if form.is_valid():
-            form.save(user=request.user, location=location)
+            form.save(user=request.user)
             return redirect('fill_out', location=location)
 
         # TODO: Figure out what to do if the form is not valid.
@@ -95,7 +99,7 @@ def handle_post_request(request, location):
 # TODO: Untested! Especially the form submission part. Write thorough tests.
 @login_required
 def fill_out(request, location):
-    if not Location.objects.filter(location_name=location).exists():
+    if not Location.objects.filter(name=location).exists():
         raise Http404('Локация не найдена')
 
     # Do not render the page if there are multiple active users.
@@ -108,17 +112,17 @@ def fill_out(request, location):
         })
 
     if request.method == 'POST':
-        form = handle_post_request(request, location)
+        form = handle_POST_request(request, location)
     else:
-        form = FillOutForm()
+        form = FillOutForm(location=location)
 
     # Get all the zones for the location.
-    zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
+    zone_names = Zone.objects.filter(location__name=location).values_list('name', flat=True)
     rows = []
 
     # TODO: Does not account for multiple marks/comments per zone, i.e. time.
     for zone in zone_names:
-        location_zone_filter = Q(location__location_name=location, zone__zone_name=zone)
+        location_zone_filter = Q(location__name=location, zone__name=zone)
         marks = list(Mark.objects.filter(location_zone_filter))
         customer_comments = list(Comment.objects.filter(location_zone_filter, is_made_by_customer_not_contractor=True))
         contractor_comments = list(Comment.objects.filter(location_zone_filter, is_made_by_customer_not_contractor=False))
@@ -148,16 +152,16 @@ def fill_out(request, location):
 
 @login_required
 def summary(request, location):
-    if not Location.objects.filter(location_name=location).exists():
+    if not Location.objects.filter(name=location).exists():
         raise Http404('Локация не найдена')
 
     # Get all the zones for the location.
-    zone_names = Zone.objects.filter(location__location_name=location).values_list('zone_name', flat=True)
+    zone_names = Zone.objects.filter(location__name=location).values_list('name', flat=True)
 
     # For each zone, get all its cells and calculate the average mark.
     zones_average_marks = {}
     for zone in zone_names:
-        marks = Mark.objects.filter(location__location_name=location, zone__zone_name=zone)
+        marks = Mark.objects.filter(location__name=location, zone__name=zone)
         zone_average_mark = sum(mark.mark for mark in marks) / len(marks) if len(marks) > 0 else 0
         zones_average_marks[zone] = zone_average_mark
 

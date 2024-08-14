@@ -19,6 +19,8 @@
 <form id="form-id" action="{% url 'fill_out' location %}" method="POST">
 {% csrf_token %}
 
+<input name="submission_timestamp" value="" hidden>
+
 <table id="table-id">
     <tr>
         <th>Время</th>

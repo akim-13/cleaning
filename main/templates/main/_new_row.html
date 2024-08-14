@@ -1,6 +1,8 @@
 <tr id="{{ row_UUID }}">
-
+    
     <td>
+        <input name="creation_timestamps[]" value="" hidden>
+
         <select name="zones[]" required>
             <option value="" selected>-------</option>
             {% for choice in form.zone.field.queryset %}

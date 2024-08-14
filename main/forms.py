@@ -1,6 +1,7 @@
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm, AuthenticationForm
-from django import forms
 from .models import User, Mark, Comment, Zone, Location
+from datetime import datetime, timezone
+from django import forms
 
 class CustomUserCreationForm(UserCreationForm):
     class Meta(UserCreationForm.Meta):
@@ -34,12 +35,25 @@ class CustomAuthenticationForm(AuthenticationForm):
 
 
 class FillOutForm(forms.Form):
-    # TODO: Use zones for the specific location.
-    zone = forms.ModelChoiceField(queryset=Zone.objects.all())
+    # NOTE: The `zone` field is set in the `__init__` method.
+    zone = forms.ModelChoiceField(queryset=Zone.objects.none())
     mark = forms.ChoiceField(choices=Mark.MARK_CHOICES)
     is_approved = forms.BooleanField()
-    customer_comment = forms.CharField()
-    contractor_comment = forms.CharField()
+    customer_comment = forms.CharField(required=False)
+    contractor_comment = forms.CharField(required=False)
+
+    # Hidden fields.
+    creation_timestamp = forms.IntegerField()
+    submission_timestamp = forms.IntegerField()
+
+    def __init__(self, *args, **kwargs):
+        self.location = kwargs.pop('location', None)
+        if self.location is None:
+            raise ValueError('Location is required when creating a FillOutForm')
+
+        super().__init__(*args, **kwargs)
+        self.fields['zone'].queryset = Zone.objects.filter(location__name=self.location)
+
 
     def clean(self):
         cleaned_data = super().clean()
@@ -56,15 +70,24 @@ class FillOutForm(forms.Form):
 
         return cleaned_data
 
-    def save(self, user, location):
-        zone = self.cleaned_data['zone']
+
+    def save(self, user):
+        location = Location.objects.get(name=self.location)
+        zone = Zone.objects.get(name=self.cleaned_data['zone'], location=location)
+
+        creation_timestamp = int(self.cleaned_data['creation_timestamp'])
+        creation_datetime = datetime.fromtimestamp(creation_timestamp, timezone.utc)
+        submission_timestamp = int(self.cleaned_data['submission_timestamp'])
+        submission_datetime = datetime.fromtimestamp(submission_timestamp, timezone.utc)
 
         mark = Mark(
             zone=zone,
             user=user,
-            location=Location.objects.get(location_name=location),
+            location=location,
             mark=self.cleaned_data['mark'],
-            is_approved=self.cleaned_data['is_approved']
+            is_approved=self.cleaned_data['is_approved'],
+            creation_datetime=creation_datetime,
+            submission_datetime=submission_datetime
         )
         mark.save()
 
@@ -72,9 +95,11 @@ class FillOutForm(forms.Form):
             customer_comment = Comment(
                 zone=zone,
                 user=user,
-                location=Location.objects.get(location_name=location),
+                location=location,
                 comment=self.cleaned_data['customer_comment'],
-                is_made_by_customer_not_contractor=True
+                is_made_by_customer_not_contractor=True,
+                creation_datetime=creation_datetime,
+                submission_datetime=submission_datetime
             )
             customer_comment.save()
 
@@ -82,12 +107,13 @@ class FillOutForm(forms.Form):
             contractor_comment = Comment(
                 zone=zone,
                 user=user,
-                location=Location.objects.get(location_name=location),
+                location=location,
                 comment=self.cleaned_data['contractor_comment'],
-                is_made_by_customer_not_contractor=False
+                is_made_by_customer_not_contractor=False,
+                creation_datetime=creation_datetime,
+                submission_datetime=submission_datetime
             )
             contractor_comment.save()
-
 
 
 class MarkForm(forms.ModelForm):
@@ -106,10 +132,10 @@ class CommentForm(forms.ModelForm):
 class LocationForm(forms.ModelForm):
     class Meta:
         model = Location
-        fields = ['location_name', 'mark_range_min', 'mark_range_max']
+        fields = ['name', 'mark_range_min', 'mark_range_max']
 
 
 class ZoneForm(forms.ModelForm):
     class Meta:
         model = Zone
-        fields = ['zone_name', 'location']
+        fields = ['name', 'location']

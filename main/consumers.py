@@ -125,7 +125,7 @@ class FillOutConsumer(WebsocketConsumer):
 
 
     def generate_new_row_html(self, row_UUID):
-        form = FillOutForm()
+        form = FillOutForm(location=self.group_name_location)
         return render_to_string('main/_new_row.html', {'form': form, 'row_UUID': row_UUID})
 
 

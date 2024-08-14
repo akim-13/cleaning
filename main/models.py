@@ -7,12 +7,12 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 # Currently, these are not set for debugging purposes.
 
 class Location(models.Model):
-    location_name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
     mark_range_min = models.SmallIntegerField(default=0)
     mark_range_max = models.SmallIntegerField(default=5)
 
     def __str__(self):
-        return self.location_name
+        return self.name
 
 class CustomUserManager(BaseUserManager):
 
@@ -76,10 +76,10 @@ class Zone(models.Model):
     created_by = models.ForeignKey(User, on_delete=models.PROTECT, related_name='zones', null=True, blank=True)
     location = models.ForeignKey(Location, on_delete=models.CASCADE, related_name='zones', null=True, blank=True)
 
-    zone_name = models.CharField(max_length=255)
+    name = models.CharField(max_length=255)
 
     def __str__(self):
-        return self.zone_name
+        return self.name
 
 
 class Mark(models.Model):
@@ -92,7 +92,10 @@ class Mark(models.Model):
     MARK_CHOICES = [(i, i) for i in range(0, 6)]
     mark = models.SmallIntegerField(choices=MARK_CHOICES)
     is_approved = models.BooleanField(default=False)
-    last_modified = models.DateTimeField(auto_now=True)
+    # NOTE: The default value is overridden in form's `save()` 
+    # method to store the time when the form was created.
+    creation_datetime = models.DateTimeField(default=timezone.now)
+    submission_datetime = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         display_string = f'[{self.location}] {self.zone}: {self.mark} '
@@ -114,7 +117,10 @@ class Comment(models.Model):
     allocated_time = models.TimeField(default=timezone.now)
 
     photo = models.ImageField(upload_to='./attachments/', null=True, blank=True)
-    last_modified = models.DateTimeField(auto_now=True)
+    # NOTE: The default value is overridden in form's `save()` 
+    # method to store the time when the form was created.
+    creation_datetime = models.DateTimeField(default=timezone.now)
+    submission_datetime = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
         display_string = f'[{self.location}] {self.zone}: '

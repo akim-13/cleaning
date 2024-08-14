@@ -82,7 +82,6 @@ function getFieldValues() {
             }
         });
     });
-    console.warn('fieldValues', JSON.stringify(fieldValues));
     return JSON.stringify(fieldValues);
 }
 function updateFieldValues(fieldValuesJsonString) {
@@ -110,8 +109,10 @@ function generateUnixTimestamp() {
 const form = document.getElementById('form-id');
 if (form) {
     form.onsubmit = event => {
-        const newRowsAdded = document.getElementById('zones[]');
+        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
         if (newRowsAdded) {
+            const submissionTimestamp = String(generateUnixTimestamp());
+            form.querySelector('[name="submission_timestamp"]').setAttribute('value', submissionTimestamp);
             sendChangeTimePeriodRequest();
         }
     };
@@ -150,23 +151,21 @@ function appendNewRowHtml(newRowHtml, row_UUID) {
         table.insertAdjacentHTML('beforeend', newRowHtml);
     }
     const row = document.getElementById(row_UUID);
+    const creationTimestamp = String(generateUnixTimestamp());
+    row.querySelector('[name="creation_timestamps[]"]').setAttribute('value', creationTimestamp);
     row.querySelector('[name="zones[]"]').addEventListener('change', updateFieldForEveryone);
     row.querySelector('[name="marks[]"]').addEventListener('change', updateFieldForEveryone);
     row.querySelector('[name="approvals[]"]').addEventListener('change', updateFieldForEveryone);
     row.querySelector('[name="customer_comments[]"]').addEventListener('input', updateFieldForEveryone);
     row.querySelector('[name="contractor_comments[]"]').addEventListener('input', updateFieldForEveryone);
+    // TODO: Move this out of the `appendNewRowHtml()`.
     function updateFieldForEveryone(event) {
         const target = event.target;
         const fieldName = target.name;
         let fieldValue = target.value;
         if (fieldName === 'approvals[]') {
             const checkbox = row.querySelector('[name="approvals[]"]');
-            if (checkbox.checked) {
-                fieldValue = 'on';
-            }
-            else {
-                fieldValue = 'off';
-            }
+            fieldValue = checkbox.checked ? 'on' : 'off';
         }
         locationSocket.send(JSON.stringify({
             'requested_action': 'field_change',

@@ -98,9 +98,7 @@ function getFieldValues(): string {
             }
         });
     });
-
-    console.warn('fieldValues', JSON.stringify(fieldValues));
-
+    
     return JSON.stringify(fieldValues);
 }
 
@@ -115,7 +113,7 @@ function updateFieldValues(fieldValuesJsonString: string): void {
         Object.keys(fieldValues[rowId]).forEach(fieldName => {
             const fieldValue = fieldValues[rowId][fieldName];
             const target = row.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
-            
+
             if (fieldName === 'approvals[]') {
                 target.checked = fieldValue === 'on';
             } else {
@@ -139,8 +137,10 @@ function generateUnixTimestamp(): number {
 const form = document.getElementById('form-id') as HTMLFormElement | null;
 if (form) {
     form.onsubmit = event => {
-        const newRowsAdded = document.getElementById('zones[]')
+        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
         if (newRowsAdded) {
+            const submissionTimestamp = String(generateUnixTimestamp());
+            form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
             sendChangeTimePeriodRequest();
         }
     }
@@ -189,13 +189,16 @@ function appendNewRowHtml(newRowHtml: string, row_UUID: string): void {
     }
 
     const row = document.getElementById(row_UUID) as HTMLTableRowElement;
+    const creationTimestamp = String(generateUnixTimestamp());
 
+    row.querySelector('[name="creation_timestamps[]"]')!.setAttribute('value', creationTimestamp);
     row.querySelector('[name="zones[]"]')!.addEventListener('change', updateFieldForEveryone);
     row.querySelector('[name="marks[]"]')!.addEventListener('change', updateFieldForEveryone);
     row.querySelector('[name="approvals[]"]')!.addEventListener('change', updateFieldForEveryone);
     row.querySelector('[name="customer_comments[]"]')!.addEventListener('input', updateFieldForEveryone);
     row.querySelector('[name="contractor_comments[]"]')!.addEventListener('input', updateFieldForEveryone);
 
+    // TODO: Move this out of the `appendNewRowHtml()`.
     function updateFieldForEveryone(event: Event) {
         const target = event.target as HTMLInputElement;
         const fieldName = target.name;
@@ -203,11 +206,7 @@ function appendNewRowHtml(newRowHtml: string, row_UUID: string): void {
         
         if (fieldName === 'approvals[]') {
             const checkbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
-            if (checkbox.checked) {
-                fieldValue = 'on';
-            } else {
-                fieldValue = 'off';
-            }
+            fieldValue = checkbox.checked ? 'on' : 'off';
         }
 
         locationSocket.send(JSON.stringify({
