@@ -24,16 +24,19 @@ locationSocket.onmessage = function (event) {
             locationSocket.send(JSON.stringify({
                 'requested_action': 'send_current_page_contents',
                 'current_page_contents': document.documentElement.innerHTML,
+                'field_values': getFieldValues(),
                 'requester': data.requester
             }));
             break;
         case 'send_current_page_contents':
             locationSocket.send(JSON.stringify({
                 'requested_action': 'update_current_page_contents',
-                'current_page_contents': data.current_page_contents
+                'current_page_contents': data.current_page_contents,
+                'field_values': data.field_values
             }));
         case 'update_current_page_contents':
             document.documentElement.innerHTML = data.current_page_contents;
+            updateFieldValues(data.field_values);
             break;
         case 'append_row':
             appendNewRowHtml(data.new_row_html, data.row_UUID);
@@ -41,18 +44,14 @@ locationSocket.onmessage = function (event) {
         case 'change_time_period':
             changeLastTimeCellHtml();
             break;
+        // TODO: Rename `field_change` to `update_field`.
         case 'field_change':
             const row = document.getElementById(data.row_UUID);
             const fieldName = data.field_name;
             const fieldValue = data.field_value;
             const target = row.querySelector(`[name="${fieldName}"]`);
             if (fieldName === 'approvals[]') {
-                if (fieldValue === 'on') {
-                    target.checked = true;
-                }
-                else {
-                    target.checked = false;
-                }
+                target.checked = fieldValue === 'on';
             }
             else {
                 target.value = fieldValue;
@@ -63,18 +62,60 @@ locationSocket.onmessage = function (event) {
 locationSocket.onclose = function (event) {
     console.error('Connection closed unexpectedly');
 };
+function getFieldValues() {
+    let fieldValues = {};
+    const table = document.getElementById('table-id');
+    const addedRows = table.querySelectorAll('tr[id]');
+    if (addedRows.length === 0) {
+        return JSON.stringify(fieldValues);
+    }
+    addedRows.forEach(row => {
+        const rowFields = row.querySelectorAll('input, select, textarea');
+        fieldValues[row.id] = {};
+        rowFields.forEach(field => {
+            if (field.name === 'approvals[]') {
+                const rowCheckbox = row.querySelector('input[type="checkbox"]');
+                fieldValues[row.id]['approvals[]'] = rowCheckbox.checked ? 'on' : 'off';
+            }
+            else {
+                fieldValues[row.id][field.name] = field.value;
+            }
+        });
+    });
+    console.warn('fieldValues', JSON.stringify(fieldValues));
+    return JSON.stringify(fieldValues);
+}
+function updateFieldValues(fieldValuesJsonString) {
+    const fieldValues = JSON.parse(fieldValuesJsonString);
+    Object.keys(fieldValues).forEach(rowId => {
+        const row = document.getElementById(rowId);
+        Object.keys(fieldValues[rowId]).forEach(fieldName => {
+            const fieldValue = fieldValues[rowId][fieldName];
+            const target = row.querySelector(`[name="${fieldName}"]`);
+            if (fieldName === 'approvals[]') {
+                target.checked = fieldValue === 'on';
+            }
+            else {
+                target.value = fieldValue;
+            }
+        });
+    });
+}
 function generateCurrentFormattedTime() {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 function generateUnixTimestamp() {
     return Math.floor(Date.now() / 1000);
 }
-document.getElementById('form-id').onsubmit = event => {
-    const newRowsAdded = document.getElementById('zones[]');
-    if (newRowsAdded) {
-        sendChangeTimePeriodRequest();
-    }
-};
+const form = document.getElementById('form-id');
+if (form) {
+    form.onsubmit = event => {
+        const newRowsAdded = document.getElementById('zones[]');
+        if (newRowsAdded) {
+            sendChangeTimePeriodRequest();
+        }
+    };
+}
 function sendChangeTimePeriodRequest() {
     locationSocket.send(JSON.stringify({
         'requested_action': 'change_time_period'

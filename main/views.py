@@ -69,6 +69,29 @@ def get_form_data_row_by_row(data, row_num):
     return form_data
 
 
+def handle_post_request(request, location):
+    data = dict(request.POST)
+
+    no_new_rows_added = data.get('zones[]') is None
+    if no_new_rows_added:
+        return redirect('fill_out', location=location)
+        
+    num_of_rows = len(data['zones[]'])
+    for row_num in range(num_of_rows):
+        row_form_data = get_form_data_row_by_row(data, row_num)
+        form = FillOutForm(row_form_data)
+
+        if form.is_valid():
+            form.save(user=request.user, location=location)
+            return redirect('fill_out', location=location)
+
+        # TODO: Figure out what to do if the form is not valid.
+        # TODO: Implement actual logging.
+        print('ERROR: Form is invalid!')
+        print(form.errors)
+        return form
+
+
 # TODO: Untested! Especially the form submission part. Write thorough tests.
 @login_required
 def fill_out(request, location):
@@ -85,26 +108,7 @@ def fill_out(request, location):
         })
 
     if request.method == 'POST':
-        data = dict(request.POST)
-
-        no_new_rows_added = data.get('zones[]') is None
-        if no_new_rows_added:
-            return redirect('fill_out', location=location)
-            
-        num_of_rows = len(data['zones[]'])
-        for row_num in range(num_of_rows):
-            row_form_data = get_form_data_row_by_row(data, row_num)
-            form = FillOutForm(row_form_data)
-
-            if form.is_valid():
-                form.save(user=request.user, location=location)
-                return redirect('fill_out', location=location)
-
-            # TODO: Figure out what to do if the form is not valid.
-            # TODO: Implement actual logging.
-            print('Form is not valid')
-            print(form.errors)
-
+        form = handle_post_request(request, location)
     else:
         form = FillOutForm()
 

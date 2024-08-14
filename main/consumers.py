@@ -45,7 +45,8 @@ class FillOutConsumer(WebsocketConsumer):
         if self.update_current_page_contents_event.wait(timeout=5):
             self.send(text_data=json.dumps({
                 'requested_action': 'update_current_page_contents',
-                'current_page_contents': self.current_page_contents
+                'current_page_contents': self.current_page_contents,
+                'field_values': self.field_values
             }))
         else:
             # TODO: Implement actual logging.
@@ -73,18 +74,22 @@ class FillOutConsumer(WebsocketConsumer):
         match requested_action:
             case 'send_current_page_contents':
                 current_page_contents = received_json_data['current_page_contents']
+                field_values = received_json_data['field_values']
                 requester = received_json_data['requester']
                 async_to_sync(self.channel_layer.send)(
                     requester, {
                         'type': 'send_current_page_contents',
-                        'current_page_contents': current_page_contents
+                        'current_page_contents': current_page_contents,
+                        'field_values': field_values
                     }
                 )
             
             case 'update_current_page_contents':
                 self.current_page_contents = received_json_data['current_page_contents']
+                self.field_values = received_json_data['field_values']
 
                 if hasattr(self, 'update_current_page_contents_event'):
+                    # Continue execution inside `update_current_page_contents()`.
                     self.update_current_page_contents_event.set()
 
             case 'append_row':
@@ -145,10 +150,10 @@ class FillOutConsumer(WebsocketConsumer):
         }))
 
     def send_current_page_contents(self, event):
-        current_page_contents = event['current_page_contents']
         self.send(text_data=json.dumps({
             'requested_action': 'send_current_page_contents',
-            'current_page_contents': current_page_contents,
+            'current_page_contents': event['current_page_contents'],
+            'field_values': event['field_values']
         }))
 
     def send_field_change_to_websocket(self, event):

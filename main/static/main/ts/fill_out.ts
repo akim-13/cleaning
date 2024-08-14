@@ -29,6 +29,7 @@ locationSocket.onmessage = function(event) {
             locationSocket.send(JSON.stringify({
                 'requested_action': 'send_current_page_contents',
                 'current_page_contents': document.documentElement.innerHTML,
+                'field_values': getFieldValues(),
                 'requester': data.requester
             }));
             break;
@@ -36,11 +37,13 @@ locationSocket.onmessage = function(event) {
         case 'send_current_page_contents':
             locationSocket.send(JSON.stringify({
                 'requested_action': 'update_current_page_contents',
-                'current_page_contents': data.current_page_contents
+                'current_page_contents': data.current_page_contents,
+                'field_values': data.field_values
             }));
 
         case 'update_current_page_contents':
             document.documentElement.innerHTML = data.current_page_contents;
+            updateFieldValues(data.field_values);
             break;
 
         case 'append_row':
@@ -51,6 +54,7 @@ locationSocket.onmessage = function(event) {
             changeLastTimeCellHtml();
             break;
 
+        // TODO: Rename `field_change` to `update_field`.
         case 'field_change':
             const row = document.getElementById(data.row_UUID) as HTMLTableRowElement;
             const fieldName = data.field_name;
@@ -58,11 +62,7 @@ locationSocket.onmessage = function(event) {
             const target = row.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
 
             if (fieldName === 'approvals[]') {
-                if (fieldValue === 'on') {
-                    target.checked = true;
-                } else {
-                    target.checked = false;
-                }
+                target.checked = fieldValue === 'on';
             } else {
                 target.value = fieldValue;
             }
@@ -77,6 +77,55 @@ locationSocket.onclose = function(event) {
 }
 
 
+function getFieldValues(): string {
+    let fieldValues: Record<string, Record<string, string>> = {};
+
+    const table = document.getElementById('table-id') as HTMLFormElement;
+    const addedRows = table.querySelectorAll('tr[id]') as NodeListOf<HTMLTableRowElement>;
+    if (addedRows.length === 0) {
+        return JSON.stringify(fieldValues);
+    }
+
+    addedRows.forEach(row => {
+        const rowFields = row.querySelectorAll('input, select, textarea') as NodeListOf<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
+        fieldValues[row.id] = {};
+        rowFields.forEach(field => {
+            if (field.name === 'approvals[]') {
+                const rowCheckbox = row.querySelector('input[type="checkbox"]') as HTMLInputElement;
+                fieldValues[row.id]['approvals[]'] = rowCheckbox.checked ? 'on' : 'off';
+            } else {
+                fieldValues[row.id][field.name] = field.value;
+            }
+        });
+    });
+
+    console.warn('fieldValues', JSON.stringify(fieldValues));
+
+    return JSON.stringify(fieldValues);
+}
+
+
+function updateFieldValues(fieldValuesJsonString: string): void {
+
+    const fieldValues = JSON.parse(fieldValuesJsonString);
+
+    Object.keys(fieldValues).forEach(rowId => {
+        const row = document.getElementById(rowId) as HTMLTableRowElement;
+
+        Object.keys(fieldValues[rowId]).forEach(fieldName => {
+            const fieldValue = fieldValues[rowId][fieldName];
+            const target = row.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
+            
+            if (fieldName === 'approvals[]') {
+                target.checked = fieldValue === 'on';
+            } else {
+                target.value = fieldValue;
+            }
+        });
+    });
+}
+
+
 function generateCurrentFormattedTime(): string {
     return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
@@ -87,10 +136,13 @@ function generateUnixTimestamp(): number {
 }
 
 
-document.getElementById('form-id')!.onsubmit = event => {
-    const newRowsAdded = document.getElementById('zones[]')
-    if (newRowsAdded) {
-        sendChangeTimePeriodRequest();
+const form = document.getElementById('form-id') as HTMLFormElement | null;
+if (form) {
+    form.onsubmit = event => {
+        const newRowsAdded = document.getElementById('zones[]')
+        if (newRowsAdded) {
+            sendChangeTimePeriodRequest();
+        }
     }
 }
 
