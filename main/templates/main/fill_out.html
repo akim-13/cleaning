@@ -31,39 +31,24 @@
         <th>Коментарии к замечаниям</th>
     </tr>
 
-    <td class="time-cell" rowspan="3">9:00 - 10:00</td>
-    {% for row in rows %}
-    <tr>
-        <td>{{ row.zone }}</td>
-        <td>{{ row.mark }}</td>
-        <td>{{ row.approval }}</td>
-        <td>{{ row.customer_comment }}</td>
-        <td>{{ row.contractor_comment }}</td>
-    </tr>
-    {% endfor %}
+    {% for time_period, rows in groups_of_rows.items %}
+        <td class="time-cell"
+            rowspan="{{ rows|length|add:1 }}"
+            {% if forloop.last %}
+                id="last-time-cell"
+                time-period-ended="true"
+            {% endif %}>{{ time_period }}</td>
 
-    <td id="last-time-cell" class="time-cell" time-period-ended="false" rowspan="4">10:00</td>
-    <tr>
-        <td>tst</td>
-        <td>adfs</td>
-        <td>adfa</td>
-        <td>412</td>
-        <td>fads</td>
-    </tr>
-    <tr>
-        <td>tst</td>
-        <td>adfs</td>
-        <td>adfa</td>
-        <td>412</td>
-        <td>fads</td>
-    </tr>
-    <tr>
-        <td>Или тут?</td>
-        <td>adfs</td>
-        <td>adfa</td>
-        <td>412</td>
-        <td>fads</td>
-    </tr>
+        {% for row in rows %}
+            <tr>
+                <td>{{ row.zone }}</td>
+                <td>{{ row.mark }}</td>
+                <td>{{ row.approval }}</td>
+                <td>{{ row.customer_comment }}</td>
+                <td>{{ row.contractor_comment }}</td>
+            </tr>
+        {% endfor %}
+    {% endfor %}
     
     <tr>
         <td id="empty-cell" class="empty-cell"></td>

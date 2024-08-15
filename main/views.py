@@ -6,6 +6,7 @@ from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
 from django.http import Http404, JsonResponse
 from django.db.models import Q
+from datetime import datetime
 import redis
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
@@ -82,18 +83,21 @@ def handle_POST_request(request, location):
     num_of_rows = len(data['zones[]'])
     for row_num in range(num_of_rows):
         row_form_data = get_form_data_row_by_row(data, row_num)
-        print('row_form_data', row_form_data)
         form = FillOutForm(row_form_data, location=location)
 
         if form.is_valid():
             form.save(user=request.user)
-            return redirect('fill_out', location=location)
 
-        # TODO: Figure out what to do if the form is not valid.
-        # TODO: Implement actual logging.
-        print('ERROR: Form is invalid!')
-        print(form.errors)
-        return form
+            is_last_iteration = row_num == num_of_rows - 1
+            if is_last_iteration:
+                return redirect('fill_out', location=location)
+        else:
+            # TODO: Figure out what to do if the form is not valid.
+            # TODO: Implement actual logging.
+            print('ERROR: Form is invalid!')
+            print('form.errors:', form.errors)
+
+    return form
 
 
 # TODO: Untested! Especially the form submission part. Write thorough tests.
@@ -112,43 +116,86 @@ def fill_out(request, location):
         })
 
     if request.method == 'POST':
+        # TODO: Fix form resubmission duplicates.
         form = handle_POST_request(request, location)
     else:
         form = FillOutForm(location=location)
 
-    # Get all the zones for the location.
-    zone_names = Zone.objects.filter(location__name=location).values_list('name', flat=True)
-    rows = []
-
-    # TODO: Does not account for multiple marks/comments per zone, i.e. time.
-    for zone in zone_names:
-        location_zone_filter = Q(location__name=location, zone__name=zone)
-        marks = list(Mark.objects.filter(location_zone_filter))
-        customer_comments = list(Comment.objects.filter(location_zone_filter, is_made_by_customer_not_contractor=True))
-        contractor_comments = list(Comment.objects.filter(location_zone_filter, is_made_by_customer_not_contractor=False))
-
-        row = {
-            'zone': zone,
-            'mark': marks[0].mark if marks else 'Н/Д',
-            'approval': 'Да' if (marks and marks[0].is_approved) else 'Нет',
-            'customer_comment': customer_comments[0].comment if customer_comments else '',
-            'contractor_comment': contractor_comments[0].comment if contractor_comments else ''
-        }
-        rows.append(row)
-
-        # Remove the first element from the lists.
-        marks = marks[1:]
-        customer_comments = customer_comments[1:]
-        contractor_comments = contractor_comments[1:]
+    groups_of_rows = generate_groups_of_rows(location)
 
     context = {
-        'rows': rows,
+        'groups_of_rows': groups_of_rows,
         'form': form,
         'location': location,
     }
 
     return render(request, 'main/fill_out.html', context)
 
+
+def generate_groups_of_rows(location):
+    # 1. Get all entries for the location from today.
+    # 2. Find the earliest entry A by creation_datetime.
+    # 3. Find all entries B that have the same submission_datetime as A.
+    # 4. Generate rows for each entry (rows1).
+    # 5. Generate formatted time periods - from creation_datetime to submission_datetime, both of A.
+    # 6. Filter out all entries A and B.
+    # 7. Repeat steps 2-6 for each time period.
+    #
+    # groups_of_rows = {'time_period1': [ rows1 ], 
+    #                   'time_period2': [ rows2 ], 
+    #                   'time_period3': [ rows3 ]...}
+
+    groups_of_rows = {}
+
+    location_today_filter = Q(location__name=location, creation_datetime__date=datetime.utcnow())
+    todays_marks = Mark.objects.filter(location_today_filter).order_by('creation_datetime')
+    todays_comments = Comment.objects.filter(location_today_filter).order_by('creation_datetime')
+    
+    while todays_marks:
+        earliest_mark = todays_marks[0]
+        earliest_submission_datetime = earliest_mark.submission_datetime
+        same_time_period_marks = todays_marks.filter(submission_datetime=earliest_submission_datetime)
+        same_time_period_comments = todays_comments.filter(submission_datetime=earliest_submission_datetime)
+
+        same_time_period_rows = []
+        for mark in same_time_period_marks:
+
+            customer_comment, contractor_comment = '', ''
+            try:
+                # NOTE: If `customer_comment` doesn't exist, `contractor_comment` shouldn't exist either.
+                customer_comment = todays_comments.get(creation_datetime=mark.creation_datetime, is_made_by_customer_not_contractor=True).comment
+                # NOTE: If `contractor_comment` raises an exception, the value of `customer_comment` is preserved.
+                contractor_comment = todays_comments.get(creation_datetime=mark.creation_datetime, is_made_by_customer_not_contractor=False).comment
+            except Comment.DoesNotExist:
+                pass
+            except Comment.MultipleObjectsReturned:
+                raise Exception('Multiple comments cannot have the same creation_datetime')
+
+            row = {
+                'zone': mark.zone.name,
+                'mark': mark.mark,
+                'approval': 'Да' if mark.is_approved else 'Нет',
+                'customer_comment': customer_comment,
+                'contractor_comment': contractor_comment
+            }
+
+            if row not in same_time_period_rows:
+                same_time_period_rows.append(row)
+
+        # TODO: Fix incorrect timezone.
+        time_format = '%H:%M'
+        time_period_start = earliest_mark.creation_datetime.strftime(time_format)
+        time_period_end = earliest_submission_datetime.strftime(time_format)
+        formatted_time_period = f'{time_period_start} - {time_period_end}'
+
+        groups_of_rows[formatted_time_period] = same_time_period_rows
+
+        remove_processed_entries_filter = Q(submission_datetime__gt=earliest_submission_datetime)
+        todays_comments = todays_comments.filter(remove_processed_entries_filter)
+        todays_marks = todays_marks.filter(remove_processed_entries_filter)
+
+    return groups_of_rows
+    
 
 @login_required
 def summary(request, location):
