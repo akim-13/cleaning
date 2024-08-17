@@ -4,6 +4,7 @@
 <head>
     {% load static %}
     <link rel="stylesheet" href="{% static 'main/css/fill_out.css' %}">
+    <meta name="csrf_token" content="{{ csrf_token }}">
     <title>Форма качества уборки</title>
 </head>
 
@@ -37,7 +38,9 @@
             {% if forloop.last %}
                 id="last-time-cell"
                 time-period-ended="true"
-            {% endif %}>{{ time_period }}</td>
+            {% endif %}>
+            {{ time_period }}
+        </td>
 
         {% for row in rows %}
             <tr>
@@ -57,7 +60,7 @@
     
 </table>
 
-<button type="submit">Готово</button>
+<button type="button" onclick="submitForm()">Готово</button>
 </form>
 
 

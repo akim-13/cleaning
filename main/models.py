@@ -8,6 +8,7 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 
 class Location(models.Model):
     name = models.CharField(max_length=255)
+    timezone = models.CharField(max_length=255, default='Europe/Moscow')
     mark_range_min = models.SmallIntegerField(default=0)
     mark_range_max = models.SmallIntegerField(default=5)
 

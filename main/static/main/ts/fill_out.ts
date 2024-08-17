@@ -28,7 +28,8 @@ locationSocket.onmessage = function(event) {
         case 'request_current_page_contents':
             locationSocket.send(JSON.stringify({
                 'requested_action': 'send_current_page_contents',
-                'current_page_contents': document.documentElement.innerHTML,
+                'current_page_contents': document.body.innerHTML,
+                'csrf_token': document.querySelector('meta[name="csrf_token"]')!.getAttribute('content')!,
                 'field_values': getFieldValues(),
                 'requester': data.requester
             }));
@@ -42,16 +43,26 @@ locationSocket.onmessage = function(event) {
             }));
 
         case 'update_current_page_contents':
-            document.documentElement.innerHTML = data.current_page_contents;
-            updateFieldValues(data.field_values);
+            document.body.innerHTML = data.current_page_contents;
+            const valid_csrf_token = document.querySelector('meta[name="csrf_token"]')!.getAttribute('content')!;
+            const form_csrf_token = document.querySelector('input[name="csrfmiddlewaretoken"]') as HTMLInputElement | null;
+
+            if (form_csrf_token === null) {
+                const form = document.getElementById('form-id') as HTMLFormElement;
+                form.insertAdjacentHTML('afterbegin', `<input name="csrfmiddlewaretoken" value="${valid_csrf_token}" hidden>`);
+            } else if (form_csrf_token.getAttribute('value') !== '') {
+                console.error('Do not send the CSRF token when updating the page!!\nReceived CSRF token:', form_csrf_token.getAttribute('value'));
+            } else {
+                 form_csrf_token.setAttribute('value', valid_csrf_token);
+            }
+            
+            if (data.field_values) {
+                updateFieldValues(data.field_values);
+            }
             break;
 
         case 'append_row':
             appendNewRowHtml(data.new_row_html, data.row_UUID);
-            break;
-
-        case 'change_time_period':
-            changeLastTimeCellHtml();
             break;
 
         // TODO: Rename `field_change` to `update_field`.
@@ -134,36 +145,13 @@ function generateUnixTimestamp(): number {
 }
 
 
-const form = document.getElementById('form-id') as HTMLFormElement | null;
-if (form) {
-    form.onsubmit = event => {
-        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
-        if (newRowsAdded) {
-            const submissionTimestamp = String(generateUnixTimestamp());
-            form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
-            sendChangeTimePeriodRequest();
-        }
-    }
-}
-
-
-function sendChangeTimePeriodRequest(): void {
-    locationSocket.send(JSON.stringify({
-        'requested_action': 'change_time_period'
-    }));
-}
-
-
-function changeLastTimeCellHtml(): void {
-    const lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
-    if (lastTimeCell.hasAttribute('end-time')) {
-        return;
-    }
-
-    lastTimeCell.innerHTML += ` - ${generateCurrentFormattedTime()}`;
-    const unixTimestamp = generateUnixTimestamp();
-    lastTimeCell.setAttribute('end-time', `${unixTimestamp}`);
-    lastTimeCell.setAttribute('time-period-ended', 'true');
+// WARNING: Do NOT use .onsubmit() instead of this function! 
+// I don't know why, but it behaves very weirdly if you do.
+function submitForm(): void {
+    const form = document.getElementById('form-id') as HTMLFormElement;
+    const submissionTimestamp = String(generateUnixTimestamp());
+    form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
+    form.submit();
 }
 
 
@@ -180,7 +168,6 @@ function appendNewRowHtml(newRowHtml: string, row_UUID: string): void {
     const table = document.getElementById('table-id') as HTMLTableElement;
 
     // Append new row.
-    // NOTE: This is a workaround, `insertBefore` doesn't work for some reason.
     if (table.rows.length > 1) {
         const lastRow = table.rows[table.rows.length - 1];
         lastRow.insertAdjacentHTML('beforebegin', newRowHtml);
@@ -218,19 +205,22 @@ function appendNewRowHtml(newRowHtml: string, row_UUID: string): void {
     }
     
     const lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
-    if (lastTimeCell.getAttribute('time-period-ended') === 'true') {
-        // Remove the `last-time-cell` identifier from the previous time cell.
+    if (lastTimeCell === null) {
+        insertNewTimeCell();
+    } else if (lastTimeCell.getAttribute('time-period-ended') === 'true') {
         let lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
         lastTimeCell.removeAttribute('id');
-
-        // Insert a new time cell.
-        // TODO: Error handling for -2.
-        const penultimateRow = table.rows[table.rows.length - 2];
-        const currentTime = generateCurrentFormattedTime();
-        const unixTimestamp = generateUnixTimestamp();
-        const newTimeCellHtml = `<td id="last-time-cell" time-period-ended="false" class="time-cell" rowspan="2" start-time="${unixTimestamp}">${currentTime}</td>`;
-        penultimateRow.insertAdjacentHTML('beforebegin', newTimeCellHtml);
+        insertNewTimeCell();
     } else {
         lastTimeCell.rowSpan += 1;
     }
+}
+
+
+function insertNewTimeCell(): void {
+    const table = document.getElementById('table-id') as HTMLTableElement;
+    const penultimateRow = table.rows[table.rows.length - 2];
+    const currentTime = generateCurrentFormattedTime();
+    const newTimeCellHtml = `<td id="last-time-cell" time-period-ended="false" class="time-cell" rowspan="2">${currentTime}</td>`;
+    penultimateRow.insertAdjacentHTML('beforebegin', newTimeCellHtml);
 }

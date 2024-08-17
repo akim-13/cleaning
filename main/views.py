@@ -4,10 +4,12 @@ from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
 from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
-from django.http import Http404, JsonResponse
+from django.http import Http404, JsonResponse, HttpResponse
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
 from django.db.models import Q
 from datetime import datetime
-import redis
+import redis, pytz
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 
@@ -55,18 +57,25 @@ def get_form_data_row_by_row(data, row_num):
         match key:
             case 'csrfmiddlewaretoken':
                 form_data['csrfmiddlewaretoken'] = values[0]
+
             case 'submission_timestamp':
                 form_data['submission_timestamp'] = values[0]
+
             case 'creation_timestamps[]':
                 form_data['creation_timestamp'] = values[row_num]
+
             case 'zones[]':
                 form_data['zone'] = values[row_num]
+
             case 'marks[]':
                 form_data['mark'] = values[row_num]
+
             case 'approvals[]':
                 form_data['is_approved'] = values[row_num]
+
             case 'customer_comments[]':
                 form_data['customer_comment'] = values[row_num]
+
             case 'contractor_comments[]':
                 form_data['contractor_comment'] = values[row_num]
 
@@ -90,6 +99,7 @@ def handle_POST_request(request, location):
 
             is_last_iteration = row_num == num_of_rows - 1
             if is_last_iteration:
+                redis_client.set(f'submission_successful_in_{location}', 'true')
                 return redirect('fill_out', location=location)
         else:
             # TODO: Figure out what to do if the form is not valid.
@@ -106,19 +116,21 @@ def fill_out(request, location):
     if not Location.objects.filter(name=location).exists():
         raise Http404('Локация не найдена')
 
-    # Do not render the page if there are multiple active users.
-    # Instead, fetch the data from an active user via WebSockets (see `FillOutConsumer`).
-    multiple_active_users_are_present = redis_client.scard(f'active_users:{location}') > 1
-    if multiple_active_users_are_present:
-        return render(request, 'main/fill_out.html', {
-            'multiple_active_users_are_present': True,
-            'location': location
-        })
+    redis_client.set(f'submission_successful_in_{location}', 'false')
 
     if request.method == 'POST':
         # TODO: Fix form resubmission duplicates.
         form = handle_POST_request(request, location)
     else:
+        # Do not render the page if there are multiple active users.
+        # Instead, fetch the data from an active user via WebSockets (see `FillOutConsumer`).
+        multiple_active_users_are_present = redis_client.scard(f'active_users_in_{location}') > 1
+        if multiple_active_users_are_present:
+            return render(request, 'main/fill_out.html', {
+                'multiple_active_users_are_present': True,
+                'location': location
+            })
+
         form = FillOutForm(location=location)
 
     groups_of_rows = generate_groups_of_rows(location)
@@ -128,6 +140,18 @@ def fill_out(request, location):
         'form': form,
         'location': location,
     }
+
+    submission_successful = redis_client.get(f'submission_successful_in_{location}').decode('utf-8')
+    if submission_successful == 'true':
+        channel_layer = get_channel_layer()
+        page_contents_after_submission = render_to_string('main/fill_out.html', context)
+
+        async_to_sync(channel_layer.group_send)(
+            location, {
+                'type': 'send_page_contents_after_submission',
+                'page_contents_after_submission': page_contents_after_submission,
+            }
+        )
 
     return render(request, 'main/fill_out.html', context)
 
@@ -182,11 +206,19 @@ def generate_groups_of_rows(location):
             if row not in same_time_period_rows:
                 same_time_period_rows.append(row)
 
-        # TODO: Fix incorrect timezone.
         time_format = '%H:%M'
-        time_period_start = earliest_mark.creation_datetime.strftime(time_format)
-        time_period_end = earliest_submission_datetime.strftime(time_format)
+        time_zone = pytz.timezone(earliest_mark.location.timezone)
+        time_period_start = earliest_mark.creation_datetime.astimezone(time_zone).strftime(time_format)
+        time_period_end = earliest_submission_datetime.astimezone(time_zone).strftime(time_format)
         formatted_time_period = f'{time_period_start} - {time_period_end}'
+
+        # NOTE: Weird edge case: if there are multiple submissions within one minute,
+        # the second submission overwrites the first one, because they both have
+        # the same time period (key). Fixed by adding a counter to duplicates.
+        i = 1
+        while formatted_time_period in groups_of_rows:
+            formatted_time_period = f'{time_period_start} - {time_period_end} ({i})'
+            i += 1
 
         groups_of_rows[formatted_time_period] = same_time_period_rows
 

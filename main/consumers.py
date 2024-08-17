@@ -1,7 +1,9 @@
 import json, redis
 from uuid import uuid4
+from bs4 import BeautifulSoup
 from threading import Event, Thread
 from collections import defaultdict
+from django.shortcuts import redirect
 from asgiref.sync import async_to_sync
 from django.template.loader import render_to_string
 from channels.generic.websocket import WebsocketConsumer
@@ -23,9 +25,18 @@ class FillOutConsumer(WebsocketConsumer):
 
         self.accept() 
 
-        group_has_active_users = redis_client.scard(f'active_users:{self.group_name_location}') > 0        
-        if group_has_active_users:
-            active_user = redis_client.srandmember(f'active_users:{self.group_name_location}').decode('utf-8')
+        if redis_client.get(f'submission_successful_in_{self.group_name_location}') is None:
+            raise Exception('"submission_successful_in_{location}" must be set by now')
+
+        submission_successful = redis_client.get(f'submission_successful_in_{self.group_name_location}').decode('utf-8')
+        group_has_active_users = redis_client.scard(f'active_users_in_{self.group_name_location}') > 0        
+        if submission_successful == 'true':
+            # NOTE: Form submission causes the page to reload, hence the submitter's
+            # websocket has to reconnect. This if prevents them from unnecessarily
+            # requesting the page contents from other users.
+            pass
+        elif group_has_active_users:
+            active_user = redis_client.srandmember(f'active_users_in_{self.group_name_location}').decode('utf-8')
 
             async_to_sync(self.channel_layer.send)(
                 active_user, {
@@ -38,7 +49,7 @@ class FillOutConsumer(WebsocketConsumer):
             update_current_page_contents_thread = Thread(target=self.update_current_page_contents)
             update_current_page_contents_thread.start()
 
-        redis_client.sadd(f'active_users:{self.group_name_location}', self.channel_name)
+        redis_client.sadd(f'active_users_in_{self.group_name_location}', self.channel_name)
 
 
     def update_current_page_contents(self):
@@ -59,11 +70,11 @@ class FillOutConsumer(WebsocketConsumer):
             self.group_name_location, self.channel_name
         )
 
-        redis_client.srem(f'active_users:{self.group_name_location}', self.channel_name)
+        redis_client.srem(f'active_users_in_{self.group_name_location}', self.channel_name)
 
-        group_is_empty = redis_client.scard(f'active_users:{self.group_name_location}') == 0
+        group_is_empty = redis_client.scard(f'active_users_in_{self.group_name_location}') == 0
         if group_is_empty:
-            redis_client.delete(f'active_users:{self.group_name_location}')
+            redis_client.delete(f'active_users_in_{self.group_name_location}')
 
 
     # Receive message from WebSocket.
@@ -74,12 +85,14 @@ class FillOutConsumer(WebsocketConsumer):
         match requested_action:
             case 'send_current_page_contents':
                 current_page_contents = received_json_data['current_page_contents']
+                csrf_token = received_json_data['csrf_token']
                 field_values = received_json_data['field_values']
                 requester = received_json_data['requester']
+
                 async_to_sync(self.channel_layer.send)(
                     requester, {
                         'type': 'send_current_page_contents',
-                        'current_page_contents': current_page_contents,
+                        'current_page_contents': current_page_contents.replace(csrf_token, ''),
                         'field_values': field_values
                     }
                 )
@@ -101,11 +114,6 @@ class FillOutConsumer(WebsocketConsumer):
                     'type': 'send_new_row_to_websocket',
                     'new_row_html': new_row_html,
                     'row_UUID': row_UUID
-                })
-            
-            case 'change_time_period':
-                self.broadcast_data_to_location_group({
-                    'type': 'send_change_time_period_request_to_websocket'
                 })
 
             case 'field_change':
@@ -137,11 +145,7 @@ class FillOutConsumer(WebsocketConsumer):
             'new_row_html': new_row_html,
             'row_UUID': row_UUID
         }))
-
-    
-    def send_change_time_period_request_to_websocket(self, event):
-        self.send(text_data=json.dumps({'requested_action': 'change_time_period'}))
-
+            
 
     def request_current_page_contents(self, event):
         self.send(text_data=json.dumps({
@@ -166,4 +170,13 @@ class FillOutConsumer(WebsocketConsumer):
             'row_UUID': row_UUID,
             'field_name': field_name,
             'field_value': field_value
+        }))
+
+    def send_page_contents_after_submission(self, event):
+        page_contents_after_submission = event['page_contents_after_submission']
+        html_body = BeautifulSoup(page_contents_after_submission, 'html.parser').body.decode_contents()
+
+        self.send(text_data=json.dumps({
+            'requested_action': 'update_current_page_contents',
+            'current_page_contents': html_body,
         }))
