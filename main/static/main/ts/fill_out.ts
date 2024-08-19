@@ -42,6 +42,7 @@ locationSocket.onmessage = function(event) {
                 'field_values': data.field_values
             }));
 
+        // TODO: Too large and a lot of code duplication. Refactor.
         case 'update_current_page_contents':
             document.body.innerHTML = data.current_page_contents;
             const valid_csrf_token = document.querySelector('meta[name="csrf_token"]')!.getAttribute('content')!;
@@ -55,6 +56,70 @@ locationSocket.onmessage = function(event) {
             } else {
                 form_csrf_token.setAttribute('value', valid_csrf_token);
             }
+
+            const form = document.getElementById('form-id') as HTMLFormElement | null;
+            if (form) {
+                form.onsubmit = event => {
+                    const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
+                    if (newRowsAdded) {
+                        const submissionTimestamp = String(generateUnixTimestamp());
+                        form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
+                    }
+                }
+            }
+
+            const addedRows = document.getElementById('table-id')!.querySelectorAll('tr[id]') as NodeListOf<HTMLTableRowElement>;
+            
+            addedRows.forEach(row => {
+                const zoneSelector = row.querySelector('[name="zones[]"]') as HTMLSelectElement;
+                const markSelector = row.querySelector('[name="marks[]"]') as HTMLSelectElement;
+                const isApprovedCheckbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
+                const customerCommentTextarea = row.querySelector('[name="customer_comments[]"]') as HTMLTextAreaElement;
+                const contractorCommentTextarea = row.querySelector('[name="contractor_comments[]"]') as HTMLTextAreaElement;
+
+                if (data.role === 'customer') {
+                    isApprovedCheckbox.classList.add('disabled');
+                    contractorCommentTextarea.classList.add('disabled');
+
+                    zoneSelector.classList.remove('disabled');
+                    markSelector.classList.remove('disabled');
+                    customerCommentTextarea.classList.remove('disabled');
+                } else if (data.role === 'contractor') {
+                    zoneSelector.classList.add('disabled');
+                    markSelector.classList.add('disabled');
+                    customerCommentTextarea.classList.add('disabled');
+
+                    isApprovedCheckbox.classList.remove('disabled');
+                    contractorCommentTextarea.classList.remove('disabled');
+                }
+
+                zoneSelector.addEventListener('change', updateFieldForEveryone);
+                markSelector.addEventListener('change', updateFieldForEveryone);
+                isApprovedCheckbox.addEventListener('change', updateFieldForEveryone);
+                customerCommentTextarea.addEventListener('input', updateFieldForEveryone);
+                contractorCommentTextarea.addEventListener('input', updateFieldForEveryone);
+            
+                function updateFieldForEveryone(event: Event) {
+                    const target = event.target as HTMLInputElement;
+                    const fieldName = target.name;
+                    let fieldValue = target.value;
+                    
+                    if (fieldName === 'approvals[]') {
+                        const checkbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
+                        fieldValue = checkbox.checked ? 'on' : 'off';
+                    }
+    
+                    const row_UUID = row.id;
+            
+                    locationSocket.send(JSON.stringify({
+                        'requested_action': 'field_change',
+                        'row_UUID': row_UUID,
+                        'field_name': fieldName,
+                        'field_value': fieldValue
+                    }));
+                }
+            });
+
             
             if (data.field_values) {
                 updateFieldValues(data.field_values);
@@ -145,13 +210,15 @@ function generateUnixTimestamp(): number {
 }
 
 
-// WARNING: Do NOT use .onsubmit() instead of this function! 
-// I don't know why, but it behaves very weirdly if you do.
-function submitForm(): void {
-    const form = document.getElementById('form-id') as HTMLFormElement;
-    const submissionTimestamp = String(generateUnixTimestamp());
-    form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
-    form.submit();
+const form = document.getElementById('form-id') as HTMLFormElement | null;
+if (form) {
+    form.onsubmit = event => {
+        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
+        if (newRowsAdded) {
+            const submissionTimestamp = String(generateUnixTimestamp());
+            form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
+        }
+    }
 }
 
 
@@ -191,13 +258,13 @@ function appendNewRowHtml(newRowHtml: string, row_UUID: string, role: string): v
     contractorCommentTextarea.addEventListener('input', updateFieldForEveryone);
 
     if (role === 'customer') {
-        isApprovedCheckbox.disabled = true;
-        contractorCommentTextarea.disabled = true;
+        isApprovedCheckbox.classList.add('disabled');
+        contractorCommentTextarea.classList.add('disabled');
     } else if (role === 'contractor') {
-        zoneSelector.disabled = true;
-        markSelector.disabled = true;
-        customerCommentTextarea.disabled = true;
-    } 
+        zoneSelector.classList.add('disabled');
+        markSelector.classList.add('disabled');
+        customerCommentTextarea.classList.add('disabled');
+    }
 
     row.querySelector('[name="creation_timestamps[]"]')!.setAttribute('value', creationTimestamp);
   

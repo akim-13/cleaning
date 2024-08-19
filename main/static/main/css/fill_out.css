@@ -24,3 +24,11 @@ th {
     white-space: nowrap;
     width: auto;
 }
+
+.disabled {
+    color: #303030;
+    background-color: #f0f0f0a6;
+    pointer-events: none;
+    border-color: rgba(118, 118, 118, 0.3);
+    opacity: 0.8;
+}

@@ -57,7 +57,8 @@ class FillOutConsumer(WebsocketConsumer):
             self.send(text_data=json.dumps({
                 'requested_action': 'update_current_page_contents',
                 'current_page_contents': self.current_page_contents,
-                'field_values': self.field_values
+                'field_values': self.field_values,
+                'role': self.get_user_role()
             }))
         else:
             # TODO: Implement actual logging.
@@ -140,15 +141,29 @@ class FillOutConsumer(WebsocketConsumer):
     def send_new_row_to_websocket(self, event):
         new_row_html = event['new_row_html']
         row_UUID = event['row_UUID']
-        # TODO: Implement getting the role from the user.
-        roles = ['customer', 'contractor']
-        random.shuffle(roles)
+
+        role = self.get_user_role()
+
         self.send(text_data=json.dumps({
             'requested_action': 'append_row',
             'new_row_html': new_row_html,
             'row_UUID': row_UUID,
-            'role': roles[0]
+            'role': role
         }))
+
+
+    def get_user_role(self):
+        user = self.scope['user']
+        roles = list(user.groups.values_list('name', flat=True))
+
+        if 'manager_contractor' in roles:
+            role = 'contractor'
+        elif 'manager_customer' in roles:
+            role = 'customer'
+        else:
+            raise Exception('User must be assigned to either manager_contractor or manager_customer group')
+
+        return role
             
 
     def request_current_page_contents(self, event):

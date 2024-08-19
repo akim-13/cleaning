@@ -116,6 +116,7 @@ def handle_POST_request(request, location):
             # TODO: Implement actual logging.
             print('ERROR: Form is invalid!')
             print('form.errors:', form.errors)
+            redis_client.set(f'submission_successful_in_{location}', 'false')
 
     return form
 
@@ -127,7 +128,7 @@ def fill_out(request, location):
     if not Location.objects.filter(name=location).exists():
         raise Http404('Локация не найдена')
 
-    redis_client.set(f'submission_successful_in_{location}', 'false')
+    redis_client.set(f'submission_successful_in_{location}', 'unknown')
 
     if request.method == 'POST':
         # TODO: Fix form resubmission duplicates.
@@ -204,6 +205,7 @@ def generate_groups_of_rows(location):
             except Comment.DoesNotExist:
                 pass
             except Comment.MultipleObjectsReturned:
+                # FIXME: F5 to resubmit the form triggers this exception.
                 raise Exception('Multiple comments cannot have the same creation_datetime')
 
             row = {
