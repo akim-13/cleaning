@@ -1,6 +1,7 @@
 from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
 from .models import Location, User, Zone, Mark, Comment
 from django.contrib.auth.decorators import login_required
+from .decorators import groups_required
 from django.template.loader import render_to_string
 from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
@@ -12,6 +13,7 @@ from datetime import datetime
 import redis, pytz
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
+from django.contrib.auth.models import Group
 
 def login_view(request):
     # If something has been filled and submitted. 
@@ -27,20 +29,28 @@ def login_view(request):
                 login(request, user)
                 return redirect('main')
     else:
-        # ??: Create a new blank (for getting, when you
+        # Create a new blank (for getting, when you
         # load the page or above data is incorrect).
         form = CustomAuthenticationForm()
     return render(request, 'main/login.html', {'form': form})
 
 
 def register_view(request):
-    # Similar to `login_view`.
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('main')
+            # Do not save the user yet
+            user = form.save(commit=False) 
+            # Ensure the user is inactive
+            user.is_active = False  
+            # Now save the user
+            user.save()  
+            # Important for saving ManyToMany relationships
+            form.save_m2m()  
+            role = form.cleaned_data.get('role')
+            group = Group.objects.get(name=role)
+            user.groups.add(group)
+            return redirect('/')
     else:
         form = CustomUserCreationForm()
     return render(request, 'main/register.html', {'form': form})
@@ -111,6 +121,7 @@ def handle_POST_request(request, location):
 
 
 # TODO: Untested! Especially the form submission part. Write thorough tests.
+@groups_required('manager_customer', 'manager_contractor')
 @login_required
 def fill_out(request, location):
     if not Location.objects.filter(name=location).exists():
@@ -229,6 +240,7 @@ def generate_groups_of_rows(location):
     return groups_of_rows
     
 
+@groups_required('representative_customer', 'representative_contractor')
 @login_required
 def summary(request, location):
     if not Location.objects.filter(name=location).exists():
@@ -255,6 +267,7 @@ def summary(request, location):
     return render(request, 'main/summary.html', context)
 
 
+@groups_required ('representative_contractor')
 @login_required
 def configure(request, location):
     return render(request, 'main/configure.html')

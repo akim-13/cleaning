@@ -2,17 +2,27 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm, Authenti
 from .models import User, Mark, Comment, Zone, Location
 from datetime import datetime, timezone
 from django import forms
+from .models import User, Location
 
 class CustomUserCreationForm(UserCreationForm):
+    location = forms.ModelMultipleChoiceField(
+        queryset = Location.objects.all(),  
+        required = False,
+        label = "Выберите объекты (не выбирать, если вы руководитель клин. компании)",
+        widget = forms.CheckboxSelectMultiple
+    )
+
     class Meta(UserCreationForm.Meta):
         model = User
-        fields = ('username', 'password1', 'password2')
+        fields = ('username', 'password1', 'password2', 'role', 'location')
         labels = {
-            'username': ('Логин'),
-            'password1': ('Пароль'),
-            'password2': ('Подтвердите пароль'),
+            'username': 'Логин',
+            'password1': 'Пароль',
+            'password2': 'Подтвердите пароль',
+            'role': 'Выберите вашу роль',
+            'location': 'Выберите объект ',
         }
-
+        
 
 class CustomUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):

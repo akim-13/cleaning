@@ -1,14 +1,13 @@
 <!DOCTYPE html>
 <html>
-<head>
-    {% load static %}
-    <link rel="stylesheet" href="{% static 'main/css/login.css' %}">
-    <title>Авторизация</title>
-</head>
-
+    <head>
+        {% load static %}
+        <link rel="stylesheet" href="{% static 'main/css/login.css' %}">
+        <title>Аунтефикация</title>
+    </head>
 <body>
     <div class="form-container">
-        <h2>Аутентификация</h2>
+        <h2>Аунтефикация</h2>
         <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
@@ -18,3 +17,4 @@
     </div>
 </body>
 </html>
+ 
