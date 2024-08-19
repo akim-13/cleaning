@@ -1,4 +1,4 @@
-import json, redis
+import json, redis, random
 from uuid import uuid4
 from bs4 import BeautifulSoup
 from threading import Event, Thread
@@ -140,10 +140,14 @@ class FillOutConsumer(WebsocketConsumer):
     def send_new_row_to_websocket(self, event):
         new_row_html = event['new_row_html']
         row_UUID = event['row_UUID']
+        # TODO: Implement getting the role from the user.
+        roles = ['customer', 'contractor']
+        random.shuffle(roles)
         self.send(text_data=json.dumps({
             'requested_action': 'append_row',
             'new_row_html': new_row_html,
-            'row_UUID': row_UUID
+            'row_UUID': row_UUID,
+            'role': roles[0]
         }))
             
 

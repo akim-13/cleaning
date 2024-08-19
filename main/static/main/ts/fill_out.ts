@@ -53,7 +53,7 @@ locationSocket.onmessage = function(event) {
             } else if (form_csrf_token.getAttribute('value') !== '') {
                 console.error('Do not send the CSRF token when updating the page!!\nReceived CSRF token:', form_csrf_token.getAttribute('value'));
             } else {
-                 form_csrf_token.setAttribute('value', valid_csrf_token);
+                form_csrf_token.setAttribute('value', valid_csrf_token);
             }
             
             if (data.field_values) {
@@ -62,7 +62,7 @@ locationSocket.onmessage = function(event) {
             break;
 
         case 'append_row':
-            appendNewRowHtml(data.new_row_html, data.row_UUID);
+            appendNewRowHtml(data.new_row_html, data.row_UUID, data.role);
             break;
 
         // TODO: Rename `field_change` to `update_field`.
@@ -164,7 +164,7 @@ function sendAppendRowRequest(): void {
 }   
 
 
-function appendNewRowHtml(newRowHtml: string, row_UUID: string): void {
+function appendNewRowHtml(newRowHtml: string, row_UUID: string, role: string): void {
     const table = document.getElementById('table-id') as HTMLTableElement;
 
     // Append new row.
@@ -178,13 +178,29 @@ function appendNewRowHtml(newRowHtml: string, row_UUID: string): void {
     const row = document.getElementById(row_UUID) as HTMLTableRowElement;
     const creationTimestamp = String(generateUnixTimestamp());
 
-    row.querySelector('[name="creation_timestamps[]"]')!.setAttribute('value', creationTimestamp);
-    row.querySelector('[name="zones[]"]')!.addEventListener('change', updateFieldForEveryone);
-    row.querySelector('[name="marks[]"]')!.addEventListener('change', updateFieldForEveryone);
-    row.querySelector('[name="approvals[]"]')!.addEventListener('change', updateFieldForEveryone);
-    row.querySelector('[name="customer_comments[]"]')!.addEventListener('input', updateFieldForEveryone);
-    row.querySelector('[name="contractor_comments[]"]')!.addEventListener('input', updateFieldForEveryone);
+    const zoneSelector = row.querySelector('[name="zones[]"]') as HTMLSelectElement;
+    const markSelector = row.querySelector('[name="marks[]"]') as HTMLSelectElement;
+    const isApprovedCheckbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
+    const customerCommentTextarea = row.querySelector('[name="customer_comments[]"]') as HTMLTextAreaElement;
+    const contractorCommentTextarea = row.querySelector('[name="contractor_comments[]"]') as HTMLTextAreaElement;
 
+    zoneSelector.addEventListener('change', updateFieldForEveryone);
+    markSelector.addEventListener('change', updateFieldForEveryone);
+    isApprovedCheckbox.addEventListener('change', updateFieldForEveryone);
+    customerCommentTextarea.addEventListener('input', updateFieldForEveryone);
+    contractorCommentTextarea.addEventListener('input', updateFieldForEveryone);
+
+    if (role === 'customer') {
+        isApprovedCheckbox.disabled = true;
+        contractorCommentTextarea.disabled = true;
+    } else if (role === 'contractor') {
+        zoneSelector.disabled = true;
+        markSelector.disabled = true;
+        customerCommentTextarea.disabled = true;
+    } 
+
+    row.querySelector('[name="creation_timestamps[]"]')!.setAttribute('value', creationTimestamp);
+  
     // TODO: Move this out of the `appendNewRowHtml()`.
     function updateFieldForEveryone(event: Event) {
         const target = event.target as HTMLInputElement;

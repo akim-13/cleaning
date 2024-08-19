@@ -54,7 +54,7 @@ locationSocket.onmessage = function (event) {
             }
             break;
         case 'append_row':
-            appendNewRowHtml(data.new_row_html, data.row_UUID);
+            appendNewRowHtml(data.new_row_html, data.row_UUID, data.role);
             break;
         // TODO: Rename `field_change` to `update_field`.
         case 'field_change':
@@ -133,7 +133,7 @@ function sendAppendRowRequest() {
         'form_UID': formUID
     }));
 }
-function appendNewRowHtml(newRowHtml, row_UUID) {
+function appendNewRowHtml(newRowHtml, row_UUID, role) {
     const table = document.getElementById('table-id');
     // Append new row.
     if (table.rows.length > 1) {
@@ -145,12 +145,26 @@ function appendNewRowHtml(newRowHtml, row_UUID) {
     }
     const row = document.getElementById(row_UUID);
     const creationTimestamp = String(generateUnixTimestamp());
+    const zoneSelector = row.querySelector('[name="zones[]"]');
+    const markSelector = row.querySelector('[name="marks[]"]');
+    const isApprovedCheckbox = row.querySelector('[name="approvals[]"]');
+    const customerCommentTextarea = row.querySelector('[name="customer_comments[]"]');
+    const contractorCommentTextarea = row.querySelector('[name="contractor_comments[]"]');
+    zoneSelector.addEventListener('change', updateFieldForEveryone);
+    markSelector.addEventListener('change', updateFieldForEveryone);
+    isApprovedCheckbox.addEventListener('change', updateFieldForEveryone);
+    customerCommentTextarea.addEventListener('input', updateFieldForEveryone);
+    contractorCommentTextarea.addEventListener('input', updateFieldForEveryone);
+    if (role === 'customer') {
+        isApprovedCheckbox.disabled = true;
+        contractorCommentTextarea.disabled = true;
+    }
+    else if (role === 'contractor') {
+        zoneSelector.disabled = true;
+        markSelector.disabled = true;
+        customerCommentTextarea.disabled = true;
+    }
     row.querySelector('[name="creation_timestamps[]"]').setAttribute('value', creationTimestamp);
-    row.querySelector('[name="zones[]"]').addEventListener('change', updateFieldForEveryone);
-    row.querySelector('[name="marks[]"]').addEventListener('change', updateFieldForEveryone);
-    row.querySelector('[name="approvals[]"]').addEventListener('change', updateFieldForEveryone);
-    row.querySelector('[name="customer_comments[]"]').addEventListener('input', updateFieldForEveryone);
-    row.querySelector('[name="contractor_comments[]"]').addEventListener('input', updateFieldForEveryone);
     // TODO: Move this out of the `appendNewRowHtml()`.
     function updateFieldForEveryone(event) {
         const target = event.target;
