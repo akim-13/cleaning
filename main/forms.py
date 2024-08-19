@@ -1,6 +1,6 @@
 from django.contrib.auth.forms import UserCreationForm, UserChangeForm, AuthenticationForm
 from django import forms
-from .models import User, Location
+from .models import User, Location, Zone 
 
 class CustomUserCreationForm(UserCreationForm):
     location = forms.ModelMultipleChoiceField(
@@ -40,3 +40,28 @@ class CustomAuthenticationForm(AuthenticationForm):
     class Meta:
         model = User
         fields = ('username', 'password')
+
+class LocationForm(forms.ModelForm): 
+    class Meta:
+        model = Location 
+        fields = ['location_name', 'mark_range_min', 'mark_range_min']
+        labels = {
+            'location_name': 'Название объекта',
+            'mark_range_min': 'Минимальная оценка',
+            'mark_range_min': 'Максимальная оценка',
+        }
+        widgets = {
+            # In the future change max's min to min's max
+            'mark_range_min': forms.NumberInput(attrs={'min': 0, 'max': 100}),
+            'mark_range_max': forms.NumberInput(attrs={'min': 0, 'max': 100}),
+        }
+        
+class ZoneForm(forms.ModelForm):
+    class Meta:
+        model = Zone
+        fields = ['zone_name']
+        labels = {
+            'zone_name': 'Название зоны',
+        }
+
+ZoneFormSet = forms.inlineformset_factory(Location, Zone, form = ZoneForm, extra = 1, can_delete = True)

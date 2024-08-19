@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from .decorators import groups_required
 from .models import Location, User, Zone, Mark, Comment
-from .forms import CustomUserCreationForm, CustomAuthenticationForm
+from .forms import CustomUserCreationForm, CustomAuthenticationForm, LocationForm, ZoneFormSet
 from django.shortcuts import render, redirect
 from django.http import Http404
 from django.db.models import Q
@@ -121,5 +121,25 @@ def summary(request, location):
 
 @groups_required ('representative_contractor')
 @login_required
-def configure(request, location):
-    return render(request, 'main/configure.html')
+def configure(request):
+    if request.method == 'POST':
+        location_form = LocationForm (request.POST)
+        zone_form = ZoneFormSet (request.POST)
+        
+        if location_form.is_valid() and zone_form.is_valid():
+            location = location_form.save()
+            zones = zone_form.save(commit=False)
+            for zone in zones:
+                zone.location = location 
+                zone.save()
+            return redirect('main/main.html')
+        
+    else:
+        location_form = LocationForm()
+        zone_form = ZoneFormSet()
+    
+    
+    return render(request, 'main/configure.html', {
+        'location_form': location_form,
+        'zone_form': zone_form
+    })
