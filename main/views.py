@@ -119,24 +119,23 @@ def summary(request, location):
     return render(request, 'main/summary.html', context)
 
 
+
 @login_required
 def configurator(request):
     if request.method == 'POST':
         location_form = LocationForm(request.POST)
-        zone_formset = ZoneFormSet(request.POST)
 
-        if location_form.is_valid() and zone_formset.is_valid():
+        if location_form.is_valid():
             location = location_form.save()
-            zones = zone_formset.save(commit=False)
-            for zone in zones:
-                zone.location = location
-                zone.save()
-            return redirect('main')  
+
+            zones = request.POST.getlist('zones[]')
+            for zone_name in zones:
+                Zone.objects.create(location=location, zone_name=zone_name)
+            return redirect('main')
+
     else:
         location_form = LocationForm()
-        zone_formset = ZoneFormSet()
 
     return render(request, 'main/configurator.html', {
         'location_form': location_form,
-        'zone_formset': zone_formset,
     })
