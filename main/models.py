@@ -44,6 +44,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ('manager_customer', 'Менеджер Заказчик'),
         ('representative_customer', 'Руководитель Объекта'),
         ('representative_contractor', 'Руководитель Клининга'),
+        ('admin_account', 'Админ Аккаунт')
     ]
     
     username = models.CharField(verbose_name="Логин",max_length=255, unique=True)

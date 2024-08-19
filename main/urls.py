@@ -7,5 +7,5 @@ urlpatterns = [
     path('main/', views.main, name='main'),
     path('<location>/fill-out/', views.fill_out, name='fill_out'),
     path('<location>/summary/', views.summary, name='summary'),
-    path('<location>/configure/', views.configure, name='configurator'),
+    path('configurator/', views.configurator, name='configurator'),
 ]

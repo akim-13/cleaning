@@ -119,27 +119,24 @@ def summary(request, location):
     return render(request, 'main/summary.html', context)
 
 
-@groups_required ('representative_contractor')
 @login_required
-def configure(request):
+def configurator(request):
     if request.method == 'POST':
-        location_form = LocationForm (request.POST)
-        zone_form = ZoneFormSet (request.POST)
-        
-        if location_form.is_valid() and zone_form.is_valid():
+        location_form = LocationForm(request.POST)
+        zone_formset = ZoneFormSet(request.POST)
+
+        if location_form.is_valid() and zone_formset.is_valid():
             location = location_form.save()
-            zones = zone_form.save(commit=False)
+            zones = zone_formset.save(commit=False)
             for zone in zones:
-                zone.location = location 
+                zone.location = location
                 zone.save()
-            return redirect('main/main.html')
-        
+            return redirect('main')  
     else:
         location_form = LocationForm()
-        zone_form = ZoneFormSet()
-    
-    
-    return render(request, 'main/configure.html', {
+        zone_formset = ZoneFormSet()
+
+    return render(request, 'main/configurator.html', {
         'location_form': location_form,
-        'zone_form': zone_form
+        'zone_formset': zone_formset,
     })

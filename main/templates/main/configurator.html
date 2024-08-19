@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'main/css/configurator.css' %}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Конфигуратор</title>
+</head>
+<body>
+    <div class="form-container">
+        <h2>Создание и Настройка Локации</h2>
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Location Form -->
+            <div>
+                {{ location_form.as_p }}
+            </div>
+
+            <!-- Zone Forms -->
+            <h3>Зоны</h3>
+            {{ zone_formset.management_form }}
+            {% for form in zone_formset %}
+                <div style="border: 1px solid #ccc; padding: 10px; margin-bottom: 10px;">
+                    {{ form.as_p }}
+                    {% if form.instance.pk %}
+                        <label for="{{ form.prefix }}-DELETE">Удалить зону?</label>
+                        {{ form.DELETE }}
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <!-- Submit Button -->
+            <button type="submit">Сохранить</button>
+        </form>
+    </div>
+</body>
+</html>
