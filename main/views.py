@@ -1,11 +1,11 @@
-from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
+from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm, LocationForm, ZoneFormSet
 from .models import Location, User, Zone, Mark, Comment
-from django.contrib.auth.decorators import login_required
 from .decorators import groups_required
+from django.http import Http404, JsonResponse, HttpResponse
+from django.contrib.auth.decorators import login_required
 from django.template.loader import render_to_string
 from django.contrib.auth import login, authenticate
 from django.shortcuts import render, redirect
-from django.http import Http404, JsonResponse, HttpResponse
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
@@ -269,7 +269,23 @@ def summary(request, location):
     return render(request, 'main/summary.html', context)
 
 
-@groups_required ('representative_contractor')
+
 @login_required
-def configure(request, location):
-    return render(request, 'main/configure.html')
+def configurator(request):
+    if request.method == 'POST':
+        location_form = LocationForm(request.POST)
+
+        if location_form.is_valid():
+            location = location_form.save()
+
+            zones = request.POST.getlist('zones[]')
+            for zone_name in zones:
+                Zone.objects.create(location=location, name=zone_name)
+            return redirect('main')
+
+    else:
+        location_form = LocationForm()
+
+    return render(request, 'main/configurator.html', {
+        'location_form': location_form,
+    })

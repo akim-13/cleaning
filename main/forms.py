@@ -2,7 +2,7 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm, Authenti
 from .models import User, Mark, Comment, Zone, Location
 from datetime import datetime, timezone
 from django import forms
-from .models import User, Location
+from .models import User, Location, Zone 
 
 class CustomUserCreationForm(UserCreationForm):
     location = forms.ModelMultipleChoiceField(
@@ -23,6 +23,12 @@ class CustomUserCreationForm(UserCreationForm):
             'location': 'Выберите объект ',
         }
         
+    def __init__(self, *args, **kwargs): 
+        super().__init__(*args, **kwargs) 
+        # Exclude the 'admin_account' role from the choices 
+        self.fields['role'].choices = [
+            (key, value) for key, value in self.fields['role'].choices if key != 'admin_account' 
+            ]
 
 class CustomUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):
@@ -126,26 +132,28 @@ class FillOutForm(forms.Form):
             contractor_comment.save()
 
 
-class MarkForm(forms.ModelForm):
-    class Meta:
-        model = Mark
-        fields = ['zone', 'mark', 'is_approved']
-
-
-class CommentForm(forms.ModelForm):
-    class Meta:
-        model = Comment
-        # NOTE: Ommitting the `photo` field for now.
-        fields = ['zone', 'comment', 'is_made_by_customer_not_contractor']
-
-
 class LocationForm(forms.ModelForm):
     class Meta:
         model = Location
         fields = ['name', 'mark_range_min', 'mark_range_max']
+        labels = {
+            'name': 'Название объекта',
+            'mark_range_min': 'Минимальная оценка',
+            'mark_range_max': 'Максимальная оценка',
+        }
+        widgets = {
+            'mark_range_min': forms.NumberInput(attrs={'min': 0, 'max': 100}),
+            'mark_range_max': forms.NumberInput(attrs={'min': 0, 'max': 100}),
+        }
 
 
 class ZoneForm(forms.ModelForm):
     class Meta:
         model = Zone
-        fields = ['name', 'location']
+
+        fields = ['name']
+        labels = {
+            'name': 'Название зоны',
+        }
+
+ZoneFormSet = forms.inlineformset_factory(Location, Zone, form=ZoneForm, extra=1, can_delete=True)

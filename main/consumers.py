@@ -7,7 +7,7 @@ from django.shortcuts import redirect
 from asgiref.sync import async_to_sync
 from django.template.loader import render_to_string
 from channels.generic.websocket import WebsocketConsumer
-from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm, MarkForm, CommentForm, LocationForm, ZoneForm
+from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm,LocationForm, ZoneFormSet
 
 # NOTE: Channels needs a Redis server. To run it, run:
 # sudo docker run --rm -p 6379:6379 redis:7
