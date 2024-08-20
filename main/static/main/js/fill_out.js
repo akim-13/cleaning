@@ -10,6 +10,10 @@
     6. [fill_out.ts] Receive the HTML from WebSocket using `locationSocket.onmessage()`.
     7. [fill_out.ts] Change the HTML of the page.
 */
+const form = document.getElementById('form-id');
+if (form) {
+    attachOnSubmitEventListener(form);
+}
 const locationName = JSON.parse(document.getElementById('location-name').textContent);
 const locationSocket = new WebSocket(`ws://${window.location.host}/fill-out/${locationName}/`);
 locationSocket.onopen = function (event) {
@@ -35,99 +39,118 @@ locationSocket.onmessage = function (event) {
                 'current_page_contents': data.current_page_contents,
                 'field_values': data.field_values
             }));
-        // TODO: Too large and a lot of code duplication. Refactor.
         case 'update_current_page_contents':
-            document.body.innerHTML = data.current_page_contents;
-            const valid_csrf_token = document.querySelector('meta[name="csrf_token"]').getAttribute('content');
-            const form_csrf_token = document.querySelector('input[name="csrfmiddlewaretoken"]');
-            if (form_csrf_token === null) {
-                const form = document.getElementById('form-id');
-                form.insertAdjacentHTML('afterbegin', `<input name="csrfmiddlewaretoken" value="${valid_csrf_token}" hidden>`);
-            }
-            else if (form_csrf_token.getAttribute('value') !== '') {
-                console.error('Do not send the CSRF token when updating the page!!\nReceived CSRF token:', form_csrf_token.getAttribute('value'));
-            }
-            else {
-                form_csrf_token.setAttribute('value', valid_csrf_token);
-            }
-            const form = document.getElementById('form-id');
-            if (form) {
-                form.onsubmit = event => {
-                    const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
-                    if (newRowsAdded) {
-                        const submissionTimestamp = String(generateUnixTimestamp());
-                        form.querySelector('[name="submission_timestamp"]').setAttribute('value', submissionTimestamp);
-                    }
-                };
-            }
-            const addedRows = document.getElementById('table-id').querySelectorAll('tr[id]');
-            addedRows.forEach(row => {
-                const zoneSelector = row.querySelector('[name="zones[]"]');
-                const markSelector = row.querySelector('[name="marks[]"]');
-                const isApprovedCheckbox = row.querySelector('[name="approvals[]"]');
-                const customerCommentTextarea = row.querySelector('[name="customer_comments[]"]');
-                const contractorCommentTextarea = row.querySelector('[name="contractor_comments[]"]');
-                if (data.role === 'customer') {
-                    isApprovedCheckbox.classList.add('disabled');
-                    contractorCommentTextarea.classList.add('disabled');
-                    zoneSelector.classList.remove('disabled');
-                    markSelector.classList.remove('disabled');
-                    customerCommentTextarea.classList.remove('disabled');
-                }
-                else if (data.role === 'contractor') {
-                    zoneSelector.classList.add('disabled');
-                    markSelector.classList.add('disabled');
-                    customerCommentTextarea.classList.add('disabled');
-                    isApprovedCheckbox.classList.remove('disabled');
-                    contractorCommentTextarea.classList.remove('disabled');
-                }
-                zoneSelector.addEventListener('change', updateFieldForEveryone);
-                markSelector.addEventListener('change', updateFieldForEveryone);
-                isApprovedCheckbox.addEventListener('change', updateFieldForEveryone);
-                customerCommentTextarea.addEventListener('input', updateFieldForEveryone);
-                contractorCommentTextarea.addEventListener('input', updateFieldForEveryone);
-                function updateFieldForEveryone(event) {
-                    const target = event.target;
-                    const fieldName = target.name;
-                    let fieldValue = target.value;
-                    if (fieldName === 'approvals[]') {
-                        const checkbox = row.querySelector('[name="approvals[]"]');
-                        fieldValue = checkbox.checked ? 'on' : 'off';
-                    }
-                    const row_UUID = row.id;
-                    locationSocket.send(JSON.stringify({
-                        'requested_action': 'field_change',
-                        'row_UUID': row_UUID,
-                        'field_name': fieldName,
-                        'field_value': fieldValue
-                    }));
-                }
-            });
-            if (data.field_values) {
-                updateFieldValues(data.field_values);
-            }
+            updateCurrentPageContents(data);
             break;
         case 'append_row':
-            appendNewRowHtml(data.new_row_html, data.row_UUID, data.role);
+            appendNewRow(data.new_row_html, data.row_UUID, data.role);
             break;
-        // TODO: Rename `field_change` to `update_field`.
-        case 'field_change':
-            const row = document.getElementById(data.row_UUID);
-            const fieldName = data.field_name;
-            const fieldValue = data.field_value;
-            const target = row.querySelector(`[name="${fieldName}"]`);
-            if (fieldName === 'approvals[]') {
-                target.checked = fieldValue === 'on';
-            }
-            else {
-                target.value = fieldValue;
-            }
+        case 'update_field':
+            updateField(data);
             break;
     }
 };
 locationSocket.onclose = function (event) {
     console.error('Connection closed unexpectedly');
 };
+function updateField(data) {
+    const fieldName = data.field_name;
+    const fieldValue = data.field_value;
+    const row = document.getElementById(data.row_UUID);
+    const target_field = row.querySelector(`[name="${fieldName}"]`);
+    if (fieldName === 'approvals[]') {
+        target_field.checked = fieldValue === 'on';
+    }
+    else {
+        target_field.value = fieldValue;
+    }
+}
+function updateCurrentPageContents(data) {
+    document.body.innerHTML = data.current_page_contents;
+    const form = document.getElementById('form-id');
+    if (!form) {
+        return;
+    }
+    insertValidCSRFToken(form);
+    attachOnSubmitEventListener(form);
+    const addedRows = document.getElementById('table-id').querySelectorAll('tr[id]');
+    addedRows.forEach(row => {
+        const rowFields = row.querySelectorAll('input, select, textarea');
+        attachInputEventListeners(rowFields);
+        disableInputsBasedOnRole(rowFields, data.role);
+    });
+    if (data.field_values) {
+        updateFieldValues(data.field_values);
+    }
+}
+function disableInputsBasedOnRole(rowFields, role) {
+    rowFields.forEach(field => {
+        if (role === 'customer') {
+            if (field.name === 'approvals[]' || field.name === 'contractor_comments[]') {
+                field.classList.add('disabled');
+            }
+            else {
+                field.classList.remove('disabled');
+            }
+        }
+        else if (role === 'contractor') {
+            if (field.name === 'zones[]' || field.name === 'marks[]' || field.name === 'customer_comments[]') {
+                field.classList.add('disabled');
+            }
+            else {
+                field.classList.remove('disabled');
+            }
+        }
+    });
+}
+function attachInputEventListeners(rowFields) {
+    rowFields.forEach(field => {
+        let inputEvent = 'change';
+        if (field.name === 'customer_comments[]' || field.name === 'contractor_comments[]') {
+            inputEvent = 'input';
+        }
+        const row = field.parentElement.parentElement;
+        field.addEventListener(inputEvent, event => updateFieldForEveryone(event, row));
+    });
+}
+function updateFieldForEveryone(event, row) {
+    const target = event.target;
+    const fieldName = target.name;
+    let fieldValue = target.value;
+    if (fieldName === 'approvals[]') {
+        const checkbox = row.querySelector('[name="approvals[]"]');
+        fieldValue = checkbox.checked ? 'on' : 'off';
+    }
+    const row_UUID = row.id;
+    locationSocket.send(JSON.stringify({
+        'requested_action': 'update_field',
+        'row_UUID': row_UUID,
+        'field_name': fieldName,
+        'field_value': fieldValue
+    }));
+}
+function insertValidCSRFToken(form) {
+    const valid_csrf_token = document.querySelector('meta[name="csrf_token"]').getAttribute('content');
+    const form_csrf_token = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    if (form_csrf_token === null) {
+        form.insertAdjacentHTML('afterbegin', `<input name="csrfmiddlewaretoken" value="${valid_csrf_token}" hidden>`);
+    }
+    else if (form_csrf_token.getAttribute('value') !== '') {
+        console.error('Do not send the CSRF token when updating the page!!\nReceived CSRF token:', form_csrf_token.getAttribute('value'));
+    }
+    else {
+        form_csrf_token.setAttribute('value', valid_csrf_token);
+    }
+}
+function attachOnSubmitEventListener(form) {
+    form.onsubmit = event => {
+        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
+        if (newRowsAdded) {
+            const submissionTimestamp = String(generateUnixTimestamp());
+            form.querySelector('[name="submission_timestamp"]').setAttribute('value', submissionTimestamp);
+        }
+    };
+}
 function getFieldValues() {
     let fieldValues = {};
     const table = document.getElementById('table-id');
@@ -172,16 +195,6 @@ function generateCurrentFormattedTime() {
 function generateUnixTimestamp() {
     return Math.floor(Date.now() / 1000);
 }
-const form = document.getElementById('form-id');
-if (form) {
-    form.onsubmit = event => {
-        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
-        if (newRowsAdded) {
-            const submissionTimestamp = String(generateUnixTimestamp());
-            form.querySelector('[name="submission_timestamp"]').setAttribute('value', submissionTimestamp);
-        }
-    };
-}
 function sendAppendRowRequest() {
     const formUID = Date.now();
     locationSocket.send(JSON.stringify({
@@ -189,9 +202,18 @@ function sendAppendRowRequest() {
         'form_UID': formUID
     }));
 }
-function appendNewRowHtml(newRowHtml, row_UUID, role) {
+function appendNewRow(newRowHtml, row_UUID, role) {
+    appendNewRowHtml(newRowHtml);
+    adjustTimeCell();
+    const row = document.getElementById(row_UUID);
+    const rowFields = row.querySelectorAll('input, select, textarea');
+    attachInputEventListeners(rowFields);
+    disableInputsBasedOnRole(rowFields, role);
+    const creationTimestamp = String(generateUnixTimestamp());
+    row.querySelector('[name="creation_timestamps[]"]').setAttribute('value', creationTimestamp);
+}
+function appendNewRowHtml(newRowHtml) {
     const table = document.getElementById('table-id');
-    // Append new row.
     if (table.rows.length > 1) {
         const lastRow = table.rows[table.rows.length - 1];
         lastRow.insertAdjacentHTML('beforebegin', newRowHtml);
@@ -199,44 +221,8 @@ function appendNewRowHtml(newRowHtml, row_UUID, role) {
     else {
         table.insertAdjacentHTML('beforeend', newRowHtml);
     }
-    const row = document.getElementById(row_UUID);
-    const creationTimestamp = String(generateUnixTimestamp());
-    const zoneSelector = row.querySelector('[name="zones[]"]');
-    const markSelector = row.querySelector('[name="marks[]"]');
-    const isApprovedCheckbox = row.querySelector('[name="approvals[]"]');
-    const customerCommentTextarea = row.querySelector('[name="customer_comments[]"]');
-    const contractorCommentTextarea = row.querySelector('[name="contractor_comments[]"]');
-    zoneSelector.addEventListener('change', updateFieldForEveryone);
-    markSelector.addEventListener('change', updateFieldForEveryone);
-    isApprovedCheckbox.addEventListener('change', updateFieldForEveryone);
-    customerCommentTextarea.addEventListener('input', updateFieldForEveryone);
-    contractorCommentTextarea.addEventListener('input', updateFieldForEveryone);
-    if (role === 'customer') {
-        isApprovedCheckbox.classList.add('disabled');
-        contractorCommentTextarea.classList.add('disabled');
-    }
-    else if (role === 'contractor') {
-        zoneSelector.classList.add('disabled');
-        markSelector.classList.add('disabled');
-        customerCommentTextarea.classList.add('disabled');
-    }
-    row.querySelector('[name="creation_timestamps[]"]').setAttribute('value', creationTimestamp);
-    // TODO: Move this out of the `appendNewRowHtml()`.
-    function updateFieldForEveryone(event) {
-        const target = event.target;
-        const fieldName = target.name;
-        let fieldValue = target.value;
-        if (fieldName === 'approvals[]') {
-            const checkbox = row.querySelector('[name="approvals[]"]');
-            fieldValue = checkbox.checked ? 'on' : 'off';
-        }
-        locationSocket.send(JSON.stringify({
-            'requested_action': 'field_change',
-            'row_UUID': row_UUID,
-            'field_name': fieldName,
-            'field_value': fieldValue
-        }));
-    }
+}
+function adjustTimeCell() {
     const lastTimeCell = document.getElementById('last-time-cell');
     if (lastTimeCell === null) {
         insertNewTimeCell();

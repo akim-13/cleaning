@@ -117,12 +117,12 @@ class FillOutConsumer(WebsocketConsumer):
                     'row_UUID': row_UUID
                 })
 
-            case 'field_change':
+            case 'update_field':
                 row_UUID = received_json_data['row_UUID']
                 field_name = received_json_data['field_name']
                 field_value = received_json_data['field_value']
                 self.broadcast_data_to_location_group({
-                    'type': 'send_field_change_to_websocket',
+                    'type': 'send_field_update_to_websocket',
                     'row_UUID': row_UUID,
                     'field_name': field_name,
                     'field_value': field_value
@@ -172,6 +172,7 @@ class FillOutConsumer(WebsocketConsumer):
             'requester': event['requester']
         }))
 
+
     def send_current_page_contents(self, event):
         self.send(text_data=json.dumps({
             'requested_action': 'send_current_page_contents',
@@ -179,18 +180,21 @@ class FillOutConsumer(WebsocketConsumer):
             'field_values': event['field_values']
         }))
 
-    def send_field_change_to_websocket(self, event):
+
+    def send_field_update_to_websocket(self, event):
         row_UUID = event['row_UUID']
         field_name = event['field_name']
         field_value = event['field_value']
 
         self.send(text_data=json.dumps({
-            'requested_action': 'field_change',
+            'requested_action': 'update_field',
             'row_UUID': row_UUID,
             'field_name': field_name,
             'field_value': field_value
         }))
 
+
+    # NOTE: This is called from the fill_out view.
     def send_page_contents_after_submission(self, event):
         page_contents_after_submission = event['page_contents_after_submission']
         html_body = BeautifulSoup(page_contents_after_submission, 'html.parser').body.decode_contents()

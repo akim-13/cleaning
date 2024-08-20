@@ -10,6 +10,11 @@
     7. [fill_out.ts] Change the HTML of the page.
 */
 
+const form = document.getElementById('form-id') as HTMLFormElement | null;
+if (form) {
+    attachOnSubmitEventListener(form);
+}
+
 const locationName = JSON.parse(document.getElementById('location-name')!.textContent!);
 const locationSocket = new WebSocket(`ws://${window.location.host}/fill-out/${locationName}/`);
 
@@ -42,107 +47,16 @@ locationSocket.onmessage = function(event) {
                 'field_values': data.field_values
             }));
 
-        // TODO: Too large and a lot of code duplication. Refactor.
         case 'update_current_page_contents':
-            document.body.innerHTML = data.current_page_contents;
-            const valid_csrf_token = document.querySelector('meta[name="csrf_token"]')!.getAttribute('content')!;
-            const form_csrf_token = document.querySelector('input[name="csrfmiddlewaretoken"]') as HTMLInputElement | null;
-
-            if (form_csrf_token === null) {
-                const form = document.getElementById('form-id') as HTMLFormElement;
-                form.insertAdjacentHTML('afterbegin', `<input name="csrfmiddlewaretoken" value="${valid_csrf_token}" hidden>`);
-            } else if (form_csrf_token.getAttribute('value') !== '') {
-                console.error('Do not send the CSRF token when updating the page!!\nReceived CSRF token:', form_csrf_token.getAttribute('value'));
-            } else {
-                form_csrf_token.setAttribute('value', valid_csrf_token);
-            }
-
-            const form = document.getElementById('form-id') as HTMLFormElement | null;
-            if (form) {
-                form.onsubmit = event => {
-                    const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
-                    if (newRowsAdded) {
-                        const submissionTimestamp = String(generateUnixTimestamp());
-                        form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
-                    }
-                }
-            }
-
-            const addedRows = document.getElementById('table-id')!.querySelectorAll('tr[id]') as NodeListOf<HTMLTableRowElement>;
-            
-            addedRows.forEach(row => {
-                const zoneSelector = row.querySelector('[name="zones[]"]') as HTMLSelectElement;
-                const markSelector = row.querySelector('[name="marks[]"]') as HTMLSelectElement;
-                const isApprovedCheckbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
-                const customerCommentTextarea = row.querySelector('[name="customer_comments[]"]') as HTMLTextAreaElement;
-                const contractorCommentTextarea = row.querySelector('[name="contractor_comments[]"]') as HTMLTextAreaElement;
-
-                if (data.role === 'customer') {
-                    isApprovedCheckbox.classList.add('disabled');
-                    contractorCommentTextarea.classList.add('disabled');
-
-                    zoneSelector.classList.remove('disabled');
-                    markSelector.classList.remove('disabled');
-                    customerCommentTextarea.classList.remove('disabled');
-                } else if (data.role === 'contractor') {
-                    zoneSelector.classList.add('disabled');
-                    markSelector.classList.add('disabled');
-                    customerCommentTextarea.classList.add('disabled');
-
-                    isApprovedCheckbox.classList.remove('disabled');
-                    contractorCommentTextarea.classList.remove('disabled');
-                }
-
-                zoneSelector.addEventListener('change', updateFieldForEveryone);
-                markSelector.addEventListener('change', updateFieldForEveryone);
-                isApprovedCheckbox.addEventListener('change', updateFieldForEveryone);
-                customerCommentTextarea.addEventListener('input', updateFieldForEveryone);
-                contractorCommentTextarea.addEventListener('input', updateFieldForEveryone);
-            
-                function updateFieldForEveryone(event: Event) {
-                    const target = event.target as HTMLInputElement;
-                    const fieldName = target.name;
-                    let fieldValue = target.value;
-                    
-                    if (fieldName === 'approvals[]') {
-                        const checkbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
-                        fieldValue = checkbox.checked ? 'on' : 'off';
-                    }
-    
-                    const row_UUID = row.id;
-            
-                    locationSocket.send(JSON.stringify({
-                        'requested_action': 'field_change',
-                        'row_UUID': row_UUID,
-                        'field_name': fieldName,
-                        'field_value': fieldValue
-                    }));
-                }
-            });
-
-            
-            if (data.field_values) {
-                updateFieldValues(data.field_values);
-            }
+            updateCurrentPageContents(data);
             break;
 
         case 'append_row':
-            appendNewRowHtml(data.new_row_html, data.row_UUID, data.role);
+            appendNewRow(data.new_row_html, data.row_UUID, data.role);
             break;
 
-        // TODO: Rename `field_change` to `update_field`.
-        case 'field_change':
-            const row = document.getElementById(data.row_UUID) as HTMLTableRowElement;
-            const fieldName = data.field_name;
-            const fieldValue = data.field_value;
-            const target = row.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
-
-            if (fieldName === 'approvals[]') {
-                target.checked = fieldValue === 'on';
-            } else {
-                target.value = fieldValue;
-            }
-
+        case 'update_field':
+            updateField(data);
             break;
     }
 }
@@ -150,6 +64,127 @@ locationSocket.onmessage = function(event) {
 
 locationSocket.onclose = function(event) {
     console.error('Connection closed unexpectedly');
+}
+
+
+function updateField(data: Record<string, string>): void {
+    const fieldName = data.field_name;
+    const fieldValue = data.field_value;
+    const row = document.getElementById(data.row_UUID) as HTMLTableRowElement;
+    const target_field = row.querySelector(`[name="${fieldName}"]`) as HTMLInputElement;
+
+    if (fieldName === 'approvals[]') {
+        target_field.checked = fieldValue === 'on';
+    } else {
+        target_field.value = fieldValue;
+    }
+}
+
+
+function updateCurrentPageContents(data: Record<string, string>): void {
+    document.body.innerHTML = data.current_page_contents;
+
+    const form = document.getElementById('form-id') as HTMLFormElement | null;
+    if (!form) {
+        return;
+    }
+    
+    insertValidCSRFToken(form);
+    attachOnSubmitEventListener(form);
+    
+    const addedRows = document.getElementById('table-id')!.querySelectorAll('tr[id]') as
+        NodeListOf<HTMLTableRowElement>;
+    
+    addedRows.forEach(row => {
+        const rowFields = row.querySelectorAll('input, select, textarea') as
+            NodeListOf<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
+
+        attachInputEventListeners(rowFields);
+        disableInputsBasedOnRole(rowFields, data.role);
+    });
+
+
+    if (data.field_values) {
+        updateFieldValues(data.field_values);
+    }
+}
+
+
+function disableInputsBasedOnRole(rowFields: NodeListOf<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, role: string) {
+    rowFields.forEach(field => {
+        if (role === 'customer') {
+            if (field.name === 'approvals[]' || field.name === 'contractor_comments[]') {
+                field.classList.add('disabled');
+            } else {
+                field.classList.remove('disabled');
+            }
+
+        } else if (role === 'contractor') {
+            if (field.name === 'zones[]' || field.name === 'marks[]' || field.name === 'customer_comments[]') {
+                field.classList.add('disabled');
+            } else {
+                field.classList.remove('disabled');
+            }
+        }
+    });
+}
+
+function attachInputEventListeners(rowFields: NodeListOf<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
+    rowFields.forEach(field => {
+        let inputEvent = 'change';
+        if (field.name === 'customer_comments[]' || field.name === 'contractor_comments[]') {
+            inputEvent = 'input';
+        }
+
+        const row = field.parentElement!.parentElement as HTMLTableRowElement;
+        field.addEventListener(inputEvent, event => updateFieldForEveryone(event, row));
+    });
+}
+
+function updateFieldForEveryone(event: Event, row: HTMLTableRowElement) {
+    const target = event.target as HTMLInputElement;
+    const fieldName = target.name;
+    let fieldValue = target.value;
+
+    
+    if (fieldName === 'approvals[]') {
+        const checkbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
+        fieldValue = checkbox.checked ? 'on' : 'off';
+    }
+    
+    const row_UUID = row.id;
+
+    locationSocket.send(JSON.stringify({
+        'requested_action': 'update_field',
+        'row_UUID': row_UUID,
+        'field_name': fieldName,
+        'field_value': fieldValue
+    }));
+}
+
+
+function insertValidCSRFToken(form: HTMLFormElement): void {
+    const valid_csrf_token = document.querySelector('meta[name="csrf_token"]')!.getAttribute('content')!;
+    const form_csrf_token = document.querySelector('input[name="csrfmiddlewaretoken"]') as HTMLInputElement | null;
+
+    if (form_csrf_token === null) {
+        form.insertAdjacentHTML('afterbegin', `<input name="csrfmiddlewaretoken" value="${valid_csrf_token}" hidden>`);
+    } else if (form_csrf_token.getAttribute('value') !== '') {
+        console.error('Do not send the CSRF token when updating the page!!\nReceived CSRF token:', form_csrf_token.getAttribute('value'));
+    } else {
+        form_csrf_token.setAttribute('value', valid_csrf_token);
+    }
+}
+
+
+function attachOnSubmitEventListener(form: HTMLFormElement): void {
+    form.onsubmit = event => {
+        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
+        if (newRowsAdded) {
+            const submissionTimestamp = String(generateUnixTimestamp());
+            form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
+        }
+    }
 }
 
 
@@ -180,8 +215,7 @@ function getFieldValues(): string {
 
 
 function updateFieldValues(fieldValuesJsonString: string): void {
-
-    const fieldValues = JSON.parse(fieldValuesJsonString);
+    const fieldValues = JSON.parse(fieldValuesJsonString) as Record<string, Record<string, string>>;
 
     Object.keys(fieldValues).forEach(rowId => {
         const row = document.getElementById(rowId) as HTMLTableRowElement;
@@ -210,18 +244,6 @@ function generateUnixTimestamp(): number {
 }
 
 
-const form = document.getElementById('form-id') as HTMLFormElement | null;
-if (form) {
-    form.onsubmit = event => {
-        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
-        if (newRowsAdded) {
-            const submissionTimestamp = String(generateUnixTimestamp());
-            form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
-        }
-    }
-}
-
-
 function sendAppendRowRequest(): void {
     const formUID = Date.now();
     locationSocket.send(JSON.stringify({
@@ -231,62 +253,35 @@ function sendAppendRowRequest(): void {
 }   
 
 
-function appendNewRowHtml(newRowHtml: string, row_UUID: string, role: string): void {
-    const table = document.getElementById('table-id') as HTMLTableElement;
+function appendNewRow(newRowHtml: string, row_UUID: string, role: string): void {
+    appendNewRowHtml(newRowHtml);
+    adjustTimeCell();
 
-    // Append new row.
+    const row = document.getElementById(row_UUID) as HTMLTableRowElement;
+    const rowFields = row.querySelectorAll('input, select, textarea') as
+        NodeListOf<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>;
+
+    attachInputEventListeners(rowFields);
+    disableInputsBasedOnRole(rowFields, role);
+
+    const creationTimestamp = String(generateUnixTimestamp());
+    row.querySelector('[name="creation_timestamps[]"]')!.setAttribute('value', creationTimestamp);
+    
+}
+
+
+function appendNewRowHtml(newRowHtml: string): void {
+    const table = document.getElementById('table-id') as HTMLTableElement;
     if (table.rows.length > 1) {
         const lastRow = table.rows[table.rows.length - 1];
         lastRow.insertAdjacentHTML('beforebegin', newRowHtml);
     } else {
         table.insertAdjacentHTML('beforeend', newRowHtml);
     }
+}
 
-    const row = document.getElementById(row_UUID) as HTMLTableRowElement;
-    const creationTimestamp = String(generateUnixTimestamp());
 
-    const zoneSelector = row.querySelector('[name="zones[]"]') as HTMLSelectElement;
-    const markSelector = row.querySelector('[name="marks[]"]') as HTMLSelectElement;
-    const isApprovedCheckbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
-    const customerCommentTextarea = row.querySelector('[name="customer_comments[]"]') as HTMLTextAreaElement;
-    const contractorCommentTextarea = row.querySelector('[name="contractor_comments[]"]') as HTMLTextAreaElement;
-
-    zoneSelector.addEventListener('change', updateFieldForEveryone);
-    markSelector.addEventListener('change', updateFieldForEveryone);
-    isApprovedCheckbox.addEventListener('change', updateFieldForEveryone);
-    customerCommentTextarea.addEventListener('input', updateFieldForEveryone);
-    contractorCommentTextarea.addEventListener('input', updateFieldForEveryone);
-
-    if (role === 'customer') {
-        isApprovedCheckbox.classList.add('disabled');
-        contractorCommentTextarea.classList.add('disabled');
-    } else if (role === 'contractor') {
-        zoneSelector.classList.add('disabled');
-        markSelector.classList.add('disabled');
-        customerCommentTextarea.classList.add('disabled');
-    }
-
-    row.querySelector('[name="creation_timestamps[]"]')!.setAttribute('value', creationTimestamp);
-  
-    // TODO: Move this out of the `appendNewRowHtml()`.
-    function updateFieldForEveryone(event: Event) {
-        const target = event.target as HTMLInputElement;
-        const fieldName = target.name;
-        let fieldValue = target.value;
-        
-        if (fieldName === 'approvals[]') {
-            const checkbox = row.querySelector('[name="approvals[]"]') as HTMLInputElement;
-            fieldValue = checkbox.checked ? 'on' : 'off';
-        }
-
-        locationSocket.send(JSON.stringify({
-            'requested_action': 'field_change',
-            'row_UUID': row_UUID,
-            'field_name': fieldName,
-            'field_value': fieldValue
-        }));
-    }
-    
+function adjustTimeCell(): void {
     const lastTimeCell = document.getElementById('last-time-cell') as HTMLTableCellElement;
     if (lastTimeCell === null) {
         insertNewTimeCell();
