@@ -1,32 +1,60 @@
 <!DOCTYPE html>
-<html>
 
 <head>
+    {% load static %}
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {% load static %}
+    <title>Оценки</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="{% static 'main/css/summary.css' %}">
-    <title>Качество уборки</title>
 </head>
 
 <body>
 
-<h1>Качество уборки в {{ location }}</h1>
+    <div class="summary-container">
+        <h2>Оценки за {{ location.name }}</h2>
+        
+        <div class="date-picker">
+            <form method="get">
+                <label for="start_date">Начало периода: </label>
+                <input type="text" id="start_date" name="start_date" value="{{ start_date }}">
+                <label for="end_date">Конец периода:</label>
+                <input type="text" id="end_date" name="end_date" value="{{ end_date }}">
+                <button type="submit">Посмотреть</button>
+            </form>
+        </div>
 
-<table>
-    <tr>
-        <th>Зона</th>
-        <th>Средняя оценка</th>
-    </tr>
-    {% for zone, average in zones_average_marks.items %}
-        <tr>
-            <td>{{ zone }}</td>
-            <td>{{ average }}</td>
-        </tr>
-    {% endfor %}
-</table>
+        <div class="results">
+            {% if zones_average_marks %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Зона</th>
+                            <th>Средняя оценка</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for zone, average in zones_average_marks.items %}
+                            <tr>
+                                <td>{{ zone }}</td>
+                                <td>{{ average|floatformat:2 }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <div class="total-average">
+                    <p>Средняя оценка за все зоны: {{ total_average_mark|floatformat:2 }}</p>
+                </div>
+            {% else %}
+                <p>Нет данных за выбранный период.</p>
+            {% endif %}
+        </div>
+    </div>
 
-<p style="text-align: center;">Итого средняя: {{ total_average_mark }}</p>
+    <script src="{% static 'main/js/summary.js' %}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 </body>
 </html>

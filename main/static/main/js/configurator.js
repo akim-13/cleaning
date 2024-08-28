@@ -4,7 +4,7 @@ function addZone() {
     const newZoneItem = document.createElement('div');
     newZoneItem.classList.add('zone-item');
     newZoneItem.innerHTML = `
-        <input type="text" name="zones[]" placeholder="Введите имя объекта" required>
+        <input type="text" name="zones[]" placeholder="Введите имя зоны" required>
         <button type="button" class="remove-zone" onclick="removeZone(this)">Удалить</button>
     `;
     zoneList.appendChild(newZoneItem);
