@@ -10,7 +10,7 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
 from datetime import datetime
-import redis, pytz
+import redis, pytz, base64
 
 redis_client = redis.Redis(host='localhost', port=6379, db=0)
 from django.contrib.auth.models import Group
@@ -159,7 +159,7 @@ def fill_out(request, location):
         page_contents_after_submission = render_to_string('main/fill_out.html', context)
 
         async_to_sync(channel_layer.group_send)(
-            location, {
+            encode_location_name(location), {
                 'type': 'send_page_contents_after_submission',
                 'page_contents_after_submission': page_contents_after_submission,
             }
@@ -240,6 +240,18 @@ def generate_groups_of_rows(location):
         todays_marks = todays_marks.filter(remove_processed_entries_filter)
 
     return groups_of_rows
+
+
+
+def encode_location_name(location_name):
+    encoded_location_name = base64.urlsafe_b64encode(location_name.encode('utf-8')).decode('utf-8')
+    # Remove any '=' padding characters.
+    encoded_location_name = encoded_location_name.rstrip('=')
+
+    if len(encoded_location_name) >= 100:
+        raise Exception('Location name is too long')
+
+    return encoded_location_name
     
 
 @groups_required('representative_customer', 'representative_contractor')

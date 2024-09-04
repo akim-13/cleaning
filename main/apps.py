@@ -4,6 +4,7 @@ import redis
 class MainConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'main'
+    verbose_name = 'Панель управления'
 
     def ready(self):
         from django.db.utils import OperationalError, ProgrammingError
