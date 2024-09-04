@@ -26,6 +26,14 @@
             </form>
         </div>
 
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
         <div class="results">
             {% if zones_average_marks %}
                 <table>

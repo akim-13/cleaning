@@ -2,6 +2,7 @@ from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm
 from .models import Location, User, Zone, Mark, Comment
 from .decorators import groups_required
 from django.http import Http404, JsonResponse, HttpResponse
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils.dateparse import parse_date
 from django.template.loader import render_to_string
@@ -263,35 +264,41 @@ def summary(request, location):
     zones_average_marks = {}
     total_average_mark = 0
 
+    # Check if the dates are valid
     if start_date and end_date:
-        # Ensure end date includes the entire day
-        end_date = end_date + timedelta(days=1)
+        if start_date > end_date:
+            messages.info(request, "Выберите период правильно: начало периода не может быть позже конца.")
+        else:
+            # Ensure end date includes the entire day
+            end_date = end_date + timedelta(days=1)
 
-        # Filter marks by location and date range
-        marks = Mark.objects.filter(
-            location=location,
-            creation_datetime__range=[start_date, end_date]
-        )
-        
-        # Get all the zones for the location
-        zone_names = Zone.objects.filter(location=location).values_list('name', flat=True)
-        
-        # Calculate the average marks for each zone
-        for zone_name in zone_names:
-            zone_marks = marks.filter(zone__name=zone_name)
-            zone_average_mark = sum(mark.mark for mark in zone_marks) / len(zone_marks) if len(zone_marks) > 0 else 0
-            zones_average_marks[zone_name] = zone_average_mark
+            # Filter marks by location and date range
+            marks = Mark.objects.filter(
+                location=location,
+                creation_datetime__range=[start_date, end_date]
+            )
+            
+            # Get all the zones for the location
+            zone_names = Zone.objects.filter(location=location).values_list('name', flat=True)
+            
+            # Calculate the average marks for each zone
+            for zone_name in zone_names:
+                zone_marks = marks.filter(zone__name=zone_name)
+                zone_average_mark = sum(mark.mark for mark in zone_marks) / len(zone_marks) if len(zone_marks) > 0 else 0
+                zones_average_marks[zone_name] = zone_average_mark
 
-        # Calculate the total average mark
-        if zones_average_marks:
-            total_average_mark = sum(zones_average_marks.values()) / len(zones_average_marks)
+            # Calculate the total average mark
+            if zones_average_marks:
+                total_average_mark = sum(zones_average_marks.values()) / len(zones_average_marks)
+    else:
+        messages.info(request, "Пожалуйста, выберите начало и конец периода.")
 
     context = {
         'location': location,
         'zones_average_marks': zones_average_marks,
         'total_average_mark': total_average_mark,
-        'start_date': start_date,
-        'end_date': end_date,
+        'start_date': start_date.strftime('%Y-%m-%d') if start_date else '',
+        'end_date': end_date.strftime('%Y-%m-%d') if end_date else '',
     }
 
     return render(request, 'main/summary.html', context)
