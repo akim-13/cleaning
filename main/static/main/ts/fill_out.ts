@@ -179,11 +179,8 @@ function insertValidCSRFToken(form: HTMLFormElement): void {
 
 function attachOnSubmitEventListener(form: HTMLFormElement): void {
     form.onsubmit = event => {
-        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
-        if (newRowsAdded) {
-            const submissionTimestamp = String(generateUnixTimestamp());
-            form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
-        }
+        const submissionTimestamp = String(generateUnixTimestamp());
+        form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
     }
 }
 

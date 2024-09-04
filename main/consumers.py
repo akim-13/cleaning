@@ -28,7 +28,7 @@ class FillOutConsumer(WebsocketConsumer):
         self.accept() 
 
         if redis_client.get(f'submission_successful_in_{self.location_name}') is None:
-            raise Exception('"submission_successful_in_{location}" must be set by now')
+            redis_client.set(f'submission_successful_in_{self.location_name}', 'unknown')
 
         submission_successful = redis_client.get(f'submission_successful_in_{self.location_name}').decode('utf-8')
         group_has_active_users = redis_client.scard(f'active_users_in_{self.location_name}') > 0        

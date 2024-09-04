@@ -144,11 +144,8 @@ function insertValidCSRFToken(form) {
 }
 function attachOnSubmitEventListener(form) {
     form.onsubmit = event => {
-        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
-        if (newRowsAdded) {
-            const submissionTimestamp = String(generateUnixTimestamp());
-            form.querySelector('[name="submission_timestamp"]').setAttribute('value', submissionTimestamp);
-        }
+        const submissionTimestamp = String(generateUnixTimestamp());
+        form.querySelector('[name="submission_timestamp"]').setAttribute('value', submissionTimestamp);
     };
 }
 function getFieldValues() {
