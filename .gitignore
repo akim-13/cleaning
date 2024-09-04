@@ -4,14 +4,24 @@
 pycache/
 db.sqlite3
 
+# IDE
+.vscode/
+
 # Environment configuration
 .env
-
-# IDEs and Editors
-.vscode/
 
 # Virtual environments
 .venv/
 venv/
 ENV/
 env/
+
+# Node modules
+node_modules/
+
+# Logs
+*.log
+
+# Daphne and other socket-related runtime files
+daphne.sock
+daphne.sock.lock

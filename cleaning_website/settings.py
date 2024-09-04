@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-_rssy-*@$%q&gz3go65o6b*6yr4qv*o5i3nhw@4tk!*$@kj-w6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['89.169.149.23', 'clean-check.ru', 'www.clean-check.ru']
 
 
 # Application definition
@@ -49,6 +49,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://clean-check.ru',
+    'https://www.clean-check.ru',  
 ]
 
 ROOT_URLCONF = 'cleaning_website.urls'
@@ -77,8 +82,12 @@ WSGI_APPLICATION = 'cleaning_website.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'db',
+        'USER': 'admin',
+        'PASSWORD': 'YouWillNeverGuess!',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -119,6 +128,7 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+STATIC_ROOT = '/home/akim/staticfiles'
 
 # Channels
 # Daphne

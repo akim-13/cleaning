@@ -15,7 +15,7 @@ if (form) {
     attachOnSubmitEventListener(form);
 }
 const locationName = JSON.parse(document.getElementById('location-name').textContent);
-const locationSocket = new WebSocket(`ws://${window.location.host}/fill-out/${locationName}/`);
+const locationSocket = new WebSocket(`wss://${window.location.host}/fill-out/${locationName}/`);
 locationSocket.onopen = function (event) {
     console.log('Connection opened');
 };
