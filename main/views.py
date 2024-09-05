@@ -126,17 +126,36 @@ def fill_out(request, location):
     if not Location.objects.filter(name=location).exists():
         raise Http404('Локация не найдена')
 
+    form_data_saved_successfully = (redis_client.get(f'submission_successful_in_{location}') is not None) and (redis_client.get(f'submission_successful_in_{location}').decode('utf-8') == 'true')
+
+    # a) Form is submitted.
     if request.method == 'POST':
         form = save_form_data(request, location)
         form_data_saved_successfully = redis_client.get(f'submission_successful_in_{location}').decode('utf-8') == 'true'
 
+        # a.1) Form is valid; redirect to make a GET request.
         if form_data_saved_successfully:
             return redirect('fill_out', location=location)
-        else:
-            # TODO: Use AJAX to dynamically insert form errors.
-            # TODO: Implement actual logging.
-            print('ERROR: Form is invalid!')
-            print('form.errors:', form.errors)
+
+        # a.2) Form is invalid; insert form errors via AJAX.
+        request_is_ajax = request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
+        if request_is_ajax:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)
+
+        # a.3) Invalid form and non-AJAX request. Should NEVER happen!!
+        # TODO: Implement actual logging.
+        print('ERROR\n'*5)
+        print('How did you even get here? Use AJAX!!')
+        print('form.errors:', form.errors)
+
+    # b) GET request from "a.1)".
+    elif form_data_saved_successfully:
+        form = FillOutForm(location=location)
+
+    # c) General GET request.
     else:
         # Do not render the page if there are multiple active users.
         # Instead, fetch the data from an active user via WebSockets (see `FillOutConsumer`).
@@ -147,8 +166,9 @@ def fill_out(request, location):
                 'location': location
             })
 
-        form = FillOutForm(location=location)
         redis_client.set(f'submission_successful_in_{location}', 'unknown')
+        form = FillOutForm(location=location)
+
 
     groups_of_rows = generate_groups_of_rows(location)
 
@@ -188,6 +208,7 @@ def generate_groups_of_rows(location):
 
     groups_of_rows = {}
 
+    # FIXME: Should be local time instead of UTC. Check edge case 23:59 -- 00:01.
     location_today_filter = Q(location__name=location, creation_datetime__date=datetime.utcnow())
     todays_marks = Mark.objects.filter(location_today_filter).order_by('creation_datetime')
     todays_comments = Comment.objects.filter(location_today_filter).order_by('creation_datetime')
