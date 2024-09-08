@@ -1,26 +1,23 @@
-// FIXME: Autoreloading issue.
 document.addEventListener('DOMContentLoaded', function() {
-    // Get the values from the input fields to set as default dates
-    const startDate = document.getElementById('start_date').value;
-    const endDate = document.getElementById('end_date').value;
-
-    flatpickr("#start_date", {
+    // Initialize flatpickr for start and end date inputs
+    const startDatePicker = flatpickr("#start_date", {
         altInput: true,
         altFormat: "F j, Y",
         dateFormat: "Y-m-d",
-        defaultDate: startDate ? startDate : null  
+        defaultDate: document.getElementById('start_date').value || null  
     });
 
-    flatpickr("#end_date", {
+    const endDatePicker = flatpickr("#end_date", {
         altInput: true,
         altFormat: "F j, Y",
         dateFormat: "Y-m-d",
-        defaultDate: endDate ? endDate : null  
+        defaultDate: document.getElementById('end_date').value || null  
     });
 
+    // Check if there are any messages to display
     if (document.querySelector('.messages')) {
         setTimeout(function() {
-            window.location.reload();
+            document.querySelector('.messages').style.display = 'none';
         }, 5000);
     }
 });

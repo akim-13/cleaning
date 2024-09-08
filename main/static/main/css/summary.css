@@ -35,3 +35,60 @@
     text-align: right;
     margin-top: 20px;
 }
+
+.tables-container {
+    width: 80%;
+    margin: 40px auto 0 auto;
+    padding: 20px;
+    background-color: #f0f0f0;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+.tables-container h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+.tables-container h3 {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    text-align: left;
+    font-weight: bold;
+    color: #333;
+}
+.tables-container table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+.tables-container th, .tables-container td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+.tables-container th {
+    background-color: #2196F3; 
+    color: white;
+}
+.tables-container td {
+    background-color: #fff;
+}
+.tables-container tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.pdf-download-button {
+    display: inline-block;
+    margin: 20px auto; 
+    padding: 10px 20px;
+    background-color: #4CAF50; 
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 5px; 
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); 
+    transition: background-color 0.3s ease; 
+}
+.pdf-download-button:hover {
+    background-color: #45a049; 
+}
