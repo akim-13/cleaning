@@ -179,10 +179,74 @@ function insertValidCSRFToken(form: HTMLFormElement): void {
 
 function attachOnSubmitEventListener(form: HTMLFormElement): void {
     form.onsubmit = event => {
-        const newRowsAdded = Boolean(document.getElementsByName('zones[]'));
-        if (newRowsAdded) {
-            const submissionTimestamp = String(generateUnixTimestamp());
-            form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
+        const submissionTimestamp = String(generateUnixTimestamp());
+        form.querySelector('[name="submission_timestamp"]')!.setAttribute('value', submissionTimestamp);
+        
+        event.preventDefault();
+
+        const formData = new FormData(form);
+        const csrfToken = document.querySelector('[name="csrfmiddlewaretoken"]')!.getAttribute('value')!;
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                "X-CSRFToken": csrfToken,
+            },
+            body: formData,
+        })
+        .then(response => {
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            // Handle form errors (form was invalid)
+            return response.json().then(data => {
+                if (!data.success) {
+                    // Update the page with form errors
+                    displayFormErrors(data.errors);
+                }
+            })
+        }})
+        .catch(error => {
+            console.error('Error:', error);
+        });
+
+        function displayFormErrors(errors: Record<string, string[]>) {
+            const errorDiv = document.querySelector('#form-errors')!;
+        
+            errorDiv.innerHTML = '';
+        
+            const genericErrorMessage = `
+                Произошла непредвиденная ошибка при отправке формы.<br>
+                Пожалуйста, свяжитесь с администратором сайта и предоставьте данные об ошибке.<br>
+                Код ошибки: 400<br>
+            `;
+            const errorMessageParagraph = document.createElement('strong');
+            errorMessageParagraph.innerHTML = genericErrorMessage;
+            errorDiv.appendChild(errorMessageParagraph);
+
+            if (!errors || Object.keys(errors).length === 0) {
+                return;
+            }
+
+            for (const [field, messages] of Object.entries(errors)) {
+                const fieldErrorDiv = document.createElement('div');
+                fieldErrorDiv.classList.add('field-error');
+    
+                const fieldTitle = document.createElement('p');
+                fieldTitle.textContent = `Ошибка в поле "${field}":`;
+                fieldErrorDiv.appendChild(fieldTitle);
+    
+                const errorList = document.createElement('ul');
+                messages.forEach(message => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = message;
+                    errorList.appendChild(listItem);
+                });
+    
+                fieldErrorDiv.appendChild(errorList);
+                errorDiv.appendChild(fieldErrorDiv);
+            }
         }
     }
 }
