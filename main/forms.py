@@ -8,7 +8,7 @@ class CustomUserCreationForm(UserCreationForm):
     location = forms.ModelMultipleChoiceField(
         queryset = Location.objects.all(),  
         required = False,
-        label = "Выберите объекты (не выбирать, если вы руководитель клин. компании)",
+        label = "Выберите объекты с которыми вы связаны (Не выбирать, если вы Аудитор Исполнитель или Конфигуратор)",
         widget = forms.CheckboxSelectMultiple
     )
 
@@ -23,12 +23,6 @@ class CustomUserCreationForm(UserCreationForm):
             'location': 'Выберите объект ',
         }
         
-    def __init__(self, *args, **kwargs): 
-        super().__init__(*args, **kwargs) 
-        # Exclude the 'admin_account' role from the choices 
-        self.fields['role'].choices = [
-            (key, value) for key, value in self.fields['role'].choices if key != 'admin_account' 
-            ]
 
 class CustomUserChangeForm(UserChangeForm):
     class Meta(UserChangeForm.Meta):

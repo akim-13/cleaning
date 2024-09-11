@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<html lang="ru">
 
 <head>
     {% load static %}
@@ -54,14 +55,13 @@
                 </table>
                 <div class="total-average">
                     <p>Средняя оценка за все зоны: {{ total_average_mark|floatformat:2 }}</p>
+                    <a href="/{{ location.name }}/summary/pdf/?start_date={{ start_date }}&end_date={{ end_date }}" class="pdf-download-button">Скачать PDF файл</a>
                 </div>
             {% else %}
                 <p>Нет данных за выбранный период.</p>
             {% endif %}
         </div>
     </div>
-    
-    <a href="/{{ location.name }}/summary/pdf/?start_date={{ start_date }}&end_date={{ end_date }}" class="pdf-download-button">Скачать PDF файл</a>
 
     <div class="tables-container">
         <h2>Данные по каждой зоне за выбранный период:</h2>

@@ -47,9 +47,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     ROLES_CHOICES = [
         ('manager_contractor', 'Менеджер Исполнитель'),
         ('manager_customer', 'Менеджер Заказчик'),
-        ('representative_customer', 'Руководитель Объекта'),
-        ('representative_contractor', 'Руководитель Клининга'),
-        ('admin_account', 'Админ Аккаунт')
+        ('auditor_contractor', 'Аудитор Исполнитель'),
+        ('auditor_customer', 'Аудитор Заказчик'),
+        ('representative', 'Представитель Клининговой Компании'),
+        ('configurator', 'Конфигуратор')
     ]
     
     username = models.CharField(verbose_name="Логин",max_length=255, unique=True)
@@ -106,11 +107,26 @@ class Zone(models.Model):
         return self.name
 
 
+class Sector(models.Model):
+    # Relations.
+    zone = models.ForeignKey(Zone, verbose_name = 'Зона', on_delete=models.CASCADE, related_name='sectors')
+    
+    name = models.CharField(max_length=255, verbose_name="Название сектора")
+
+    class Meta:
+        verbose_name = 'Сектор'
+        verbose_name_plural = 'Секторы'
+    
+    def __str__(self):
+        return f"{self.zone.name} - {self.name}"
+
+
 class Mark(models.Model):
     # Relations.
-    zone = models.ForeignKey(Zone, verbose_name = 'Зона', on_delete=models.CASCADE, related_name='marks')
-    user = models.ForeignKey(User, verbose_name = 'Пользователь', on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
-    location = models.ForeignKey(Location, verbose_name = 'Объект', on_delete=models.CASCADE, null=True, blank=True, related_name='marks')
+    zone = models.ForeignKey(Zone, verbose_name = 'Зона', on_delete = models.CASCADE, related_name='marks')
+    sector = models.ForeignKey(Sector, verbose_name = 'Сектор', on_delete = models.CASCADE, related_name='marks', null=True, blank=True)
+    user = models.ForeignKey(User, verbose_name = 'Пользователь', on_delete = models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
+    location = models.ForeignKey(Location, verbose_name = 'Объект', on_delete = models.CASCADE, null=True, blank=True, related_name='marks')
 
     # TODO: Use mark_range_min and mark_range_max from Location (seems hard to implement atm).
     MARK_CHOICES = [(i, i) for i in range(0, 6)]
@@ -126,17 +142,18 @@ class Mark(models.Model):
         verbose_name_plural = 'Оценки'
 
     def __str__(self):
-        display_string = f'[{self.location}] {self.zone}: {self.mark} '
-        
-        if self.is_approved:
-            return display_string + '(✔)'
+        if self.sector:
+            display_string = f'[{self.location}] {self.sector.zone} - {self.sector}: {self.mark} '
         else:
-            return display_string + '(❌)'
+            display_string = f'[{self.location}] {self.zone}: {self.mark} '
+        
+        return display_string + '(✔)' if self.is_approved else display_string + '(❌)'
 
 
 class Comment(models.Model):
     # Relations.
     zone = models.ForeignKey(Zone, verbose_name = 'Зона', on_delete=models.CASCADE, related_name='comments')
+    sector = models.ForeignKey(Sector, verbose_name='Сектор', on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
     user = models.ForeignKey(User, verbose_name = 'Пользователь', on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='comments')
     location = models.ForeignKey(Location, verbose_name = 'Объект', on_delete=models.CASCADE, null=True, blank=True, related_name='comments')
 
@@ -155,7 +172,11 @@ class Comment(models.Model):
         verbose_name_plural = 'Комментарии'
 
     def __str__(self):
-        display_string = f'[{self.location}] {self.zone}: '
+        if self.sector:
+            display_string = f'[{self.location}] {self.sector.zone} - {self.sector}:'
+        else:
+            display_string = f'[{self.location}] {self.zone}:'
+        
         if self.is_made_by_customer_not_contractor:
             return display_string + f'Customer: "{self.comment}"'
         else:

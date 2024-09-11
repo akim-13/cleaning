@@ -14,9 +14,10 @@ class MainConfig(AppConfig):
             roles = [
                 ('manager_contractor', 'Менеджер Исполнитель'),
                 ('manager_customer', 'Менеджер Заказчик'),
-                ('representative_customer', 'Руководитель Объекта'),
-                ('representative_contractor', 'Руководитель Клининга'),
-                ('admin_account', 'Админ Аккаунт'),
+                ('auditor_contractor', 'Аудитор Исполнитель'),
+                ('auditor_customer', 'Аудитор Заказчик'),
+                ('representative', 'Представитель Клининговой Компании'),
+                ('configurator', 'Конфигуратор')
             ]
 
             for role_name, _ in roles:

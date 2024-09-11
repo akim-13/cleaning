@@ -282,7 +282,7 @@ def encode_location_name(location_name):
     return encoded_location_name
     
 
-@groups_required('representative_customer', 'representative_contractor')
+@groups_required('auditor_customer', 'auditor_contractor', 'representative')
 @login_required
 def summary(request, location):
     # Use the utility function to get context data
@@ -298,13 +298,13 @@ def summary(request, location):
     })
 
 
-@groups_required('representative_customer', 'representative_contractor')
+@groups_required('auditor_customer', 'auditor_contractor', 'representative')
 @login_required
 def summary_pdf(request, location):
     # Use the utility function to get context data
     context = get_summary_data(request, location)
 
-    html_string = render_to_string('main/summary.html', {
+    html_string = render_to_string('main/summary_pdf.html', {
         'location': context['location'],
         'zones_average_marks': context['zones_average_marks'],
         'total_average_mark': context['total_average_mark'],
@@ -323,6 +323,7 @@ def summary_pdf(request, location):
     return response
 
 
+@groups_required('representative', 'configurator')
 @login_required
 def configurator(request):
     if request.method == 'POST':

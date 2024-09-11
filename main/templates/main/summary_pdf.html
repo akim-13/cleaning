@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Сводный отчет PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            margin: 0;
+            padding: 30px 20px; 
+            background-color: white;
+        }
+        
+        .pdf-container {
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 10px; 
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px; 
+        }
+        
+        h2 {
+            font-size: 18px; 
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 8px;
+        }
+        
+        .date-info {
+            margin-bottom: 20px;
+        }
+        
+        .date-info p {
+            margin: 5px 0;
+            font-size: 14px; 
+        }
+        
+        .pdf-table {
+            width: 100%; 
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .pdf-table th, .pdf-table td {
+            border: 1px solid #ddd;
+            padding: 12px; 
+            text-align: center;
+            vertical-align: middle;
+            font-size: 13px; 
+        }
+        
+        .pdf-table th {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+            font-size: 14px; 
+        }
+        
+        .pdf-table tr:nth-child(even) {
+            background-color: #f3f3f3; 
+        }
+        
+        .total-average {
+            font-weight: bold;
+            text-align: right;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .zone-data h2 {
+            margin-top: 40px;
+            font-size: 16px;
+            font-weight: bold;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .zone-data {
+            page-break-inside: avoid; 
+        }        
+    </style>
+</head>
+<body>
+    <div class="pdf-container">
+        <h1>Сводный отчет для {{ location.name }}</h1>
+        
+        <div class="date-info">
+            <p><strong>Дата начала:</strong> {{ start_date }}</p>
+            <p><strong>Дата окончания:</strong> {{ end_date }}</p>
+        </div>
+
+        {% if zones_average_marks %}
+        <h2>Средние оценки по зонам</h2>
+        <table class="pdf-table">
+            <thead>
+                <tr>
+                    <th>Зона</th>
+                    <th>Средняя оценка</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for zone, average in zones_average_marks.items %}
+                <tr>
+                    <td>{{ zone }}</td>
+                    <td>{{ average|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <p class="total-average">Общая средняя оценка: {{ total_average_mark|floatformat:2 }}</p>
+        {% else %}
+        <p>Нет данных за выбранный период.</p>
+        {% endif %}
+
+        <div class="zone-data">
+            {% for date_time, rows in groups_of_rows.items %}
+            <h2>Дата: {{ date_time.0 }} - Период: {{ date_time.1 }}</h2>
+            <table class="pdf-table">
+                <thead>
+                    <tr>
+                        <th>Зона</th>
+                        <th>Оценка</th>
+                        <th>Комментарий заказчика</th>
+                        <th>Комментарий исполнителя</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                    <tr>
+                        <td>{{ row.zone }}</td>
+                        <td>{{ row.mark }}</td>
+                        <td>{{ row.customer_comment }}</td>
+                        <td>{{ row.contractor_comment }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
