@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Django (Docker)",
+      "type": "debugpy",
+      "preLaunchTask": "docker-compose up",
+      "postDebugTask": "docker-compose down",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      },
+      "pathMappings": [
+        {
+          "localRoot": "${workspaceFolder}",
+          "remoteRoot": "/usr/src/app"
+        }
+      ],
+      "django": true
+    }
+  ]
+}

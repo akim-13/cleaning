@@ -13,7 +13,7 @@ from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm
 # NOTE: Channels needs a Redis server. To run it, run:
 # sudo docker run --rm -p 6379:6379 redis:7
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host='redis', port=6379, db=0)
 
 class FillOutConsumer(WebsocketConsumer):
     def connect(self):
