@@ -95,7 +95,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 class Zone(models.Model):
     # Relations.
     created_by = models.ForeignKey(User, verbose_name="Создано", on_delete=models.PROTECT, related_name='zones', null=True, blank=True)
-    location = models.ForeignKey(Location, verbose_name="Объект", on_delete=models.CASCADE, related_name='zones', null=True, blank=True)
+    location = models.ForeignKey(Location, verbose_name="Объект", on_delete=models.CASCADE, related_name='zones')
 
     name = models.CharField(max_length=255)
 

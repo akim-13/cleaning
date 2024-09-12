@@ -312,16 +312,18 @@ def summary_pdf(request, location):
         'end_date': context['end_date'].strftime('%Y-%m-%d') if context['end_date'] else '',
         'groups_of_rows': context['groups_of_rows']
     })
-
+    
     # Create a PDF from the HTML string
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="summary_{context["location"].name}.pdf"'
+
+    # Ensure proper headers are set to force download
+    response['Content-Disposition'] = f'attachment; filename*=UTF-8\'\'{context["location"].name}_{context["start_date"].strftime("%Y-%m-%d")}_{context["end_date"].strftime("%Y-%m-%d")}.pdf'
+    response['Content-Transfer-Encoding'] = 'binary'  # Ensure binary encoding
 
     # Generate PDF
     HTML(string=html_string).write_pdf(response)
 
     return response
-
 
 @groups_required('representative', 'configurator')
 @login_required
