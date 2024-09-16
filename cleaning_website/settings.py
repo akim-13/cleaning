@@ -40,11 +40,11 @@ DATABASES = {
     }
 }
 
-STATIC_ROOT = '/var/www/static/'
 STATIC_URL = '/static/'
+STATIC_ROOT = '/var/www/static/'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_ROOT = '/var/www/media/'
 
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0', '127.0.0.1:8000']
 
