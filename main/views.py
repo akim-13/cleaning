@@ -210,8 +210,9 @@ def generate_groups_of_rows(location):
 
     groups_of_rows = {}
 
-    # FIXME: Should be local time instead of UTC. Check edge case 23:59 -- 00:01.
-    location_today_filter = Q(location__name=location, creation_datetime__date=datetime.utcnow())
+    timezone = pytz.timezone(Location.objects.get(name=location).timezone)
+    now = timezone.localize(datetime.now())
+    location_today_filter = Q(location__name=location, creation_datetime__date=now.date())
     todays_marks = Mark.objects.filter(location_today_filter).order_by('creation_datetime')
     todays_comments = Comment.objects.filter(location_today_filter).order_by('creation_datetime')
     
@@ -233,7 +234,6 @@ def generate_groups_of_rows(location):
             except Comment.DoesNotExist:
                 pass
             except Comment.MultipleObjectsReturned:
-                # FIXME: F5 to resubmit the form triggers this exception.
                 raise Exception('Multiple comments cannot have the same creation_datetime')
 
             row = {
@@ -248,9 +248,8 @@ def generate_groups_of_rows(location):
                 same_time_period_rows.append(row)
 
         time_format = '%H:%M'
-        time_zone = pytz.timezone(earliest_mark.location.timezone)
-        time_period_start = earliest_mark.creation_datetime.astimezone(time_zone).strftime(time_format)
-        time_period_end = earliest_submission_datetime.astimezone(time_zone).strftime(time_format)
+        time_period_start = earliest_mark.creation_datetime.astimezone(timezone).strftime(time_format)
+        time_period_end = earliest_submission_datetime.astimezone(timezone).strftime(time_format)
         formatted_time_period = f'{time_period_start} - {time_period_end}'
 
         # NOTE: Weird edge case: if there are multiple submissions within one minute,

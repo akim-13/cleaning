@@ -19,6 +19,7 @@ class Location(models.Model):
     def __str__(self):
         return self.name
 
+
 class CustomUserManager(BaseUserManager):
 
     def create_user(self, username, password, **extra_fields): 
@@ -112,9 +113,7 @@ class Mark(models.Model):
     user = models.ForeignKey(User, verbose_name = 'Пользователь', on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
     location = models.ForeignKey(Location, verbose_name = 'Объект', on_delete=models.CASCADE, null=True, blank=True, related_name='marks')
 
-    # TODO: Use mark_range_min and mark_range_max from Location (seems hard to implement atm).
-    MARK_CHOICES = [(i, i) for i in range(0, 6)]
-    mark = models.SmallIntegerField(verbose_name = 'Оценка', choices=MARK_CHOICES)
+    mark = models.SmallIntegerField(verbose_name = 'Оценка')
     is_approved = models.BooleanField(verbose_name = 'Подтверждение', default=False)
     # NOTE: The default value is overridden in form's `save()` 
     # method to store the time when the form was created.
