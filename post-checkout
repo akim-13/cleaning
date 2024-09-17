@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# USAGE: Create a hard link to this script in .git/hooks/ directory.
+# On Linux run: `ln post-checkout .git/hooks/`
+# Alternatively, just copy it to the same directory.
+
+if [ ! -f .env ]; then
+    echo "ERROR: define the .env file!"
+    exit 1
+fi
+
+START_TAG="### BRANCH SPECIFIC VARS START ###"
+END_TAG="### BRANCH SPECIFIC VARS END ###"
+
+# Delete the lines between the tags.
+sed -i "/$START_TAG/,/$END_TAG/ {//!d}" .env
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [ "$BRANCH" == "production" ]; then
+    BRANCH_SPECIFIC_VARS=$(printf "%s\n" \
+        'ENV="production"' \
+        'COMPOSE_PROFILES="production"' \
+        'CODE_VOLUME=""' \
+        'IMAGE="ghcr.io/akim-13/cleaning-website:latest"' \
+        'DEBUG="0"')
+else
+    BRANCH_SPECIFIC_VARS=$(printf "%s\n" \
+        'ENV="development"' \
+        'COMPOSE_PROFILES="development"' \
+        'CODE_VOLUME=".:/usr/src/app"' \
+        'IMAGE=""' \
+        'DEBUG="1"')
+fi
+
+# Put the branch specific vars in between the tags. 
+awk -v x="$BRANCH_SPECIFIC_VARS" "/$START_TAG/ {print; print x; next}1" .env > awk_tmp && mv awk_tmp .env

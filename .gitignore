@@ -5,7 +5,7 @@ pycache/
 db.sqlite3
 
 # Environment configuration
-.env
+.env*
 
 # Virtual environments
 .venv/

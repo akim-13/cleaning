@@ -1,12 +1,13 @@
 services:
   django:
-    build: .
     container_name: django
+    image: ${IMAGE}             # If set (in production), image from GHCR is used.
+    build: .                    # If image is unset or --build flag is used, build is used.
+    entrypoint: /usr/src/app/entrypoint.sh
     volumes:
-      - .:/usr/src/app
-      - static:/var/www/static  # Mount static dir to share with nginx
+      - ${CODE_VOLUME}          # Set to .:/usr/src/app in dev, unset in prod.
+      - static:/var/www/static  # Mount static dir to share with nginx in dev, unset in prod.
       - media:/var/www/media    # Mount media dir to share with nginx
-    command: /usr/src/app/entrypoint.sh
     ports:
       - "5678:5678"             # Port for VScode debugger to attach
     depends_on:
@@ -16,8 +17,8 @@ services:
       - .env
 
   postgres:
-    image: postgres:16
     container_name: postgres
+    image: postgres:16
     ports:
       - "5432:5432"
     environment:
@@ -28,36 +29,53 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   redis:
-    image: redis:7
     container_name: redis
+    image: redis:7
     ports:
       - "6379:6379"
 
   nginx:
-    image: nginx:1.27
     container_name: nginx
+    image: nginx:1.27
     ports:
-      - "80:80"
+      - "80:80"                # HTTP requests
+      - "443:443"              # HTTPS requests
     volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/${ENV}/nginx.conf:/etc/nginx/conf.d/default.conf
       - static:/var/www/static
       - media:/var/www/media
+      - certbot_etc:/etc/letsencrypt
+      - certbot_var:/var/www/certbot
     depends_on:
       - django
 
   tsc:
-    image: node:22
     container_name: tsc
-    volumes:
-      - .:/usr/src/app
+    image: node:22
     build:
       context: .
       dockerfile: Dockerfile.tsc
-    command: /bin/sh -c "tsc --watch > /dev/null 2>&1"
+    command: /bin/sh -c "echo 'Launching tsc' && tsc --watch > /dev/null 2>&1"
+    volumes:
+      - .:/usr/src/app
+    profiles:
+      - "development"
+
+  certbot:
+      container_name: certbot
+      image: certbot/certbot
+      command: certonly --webroot --webroot-path=/var/www/certbot --email ak.reg@tuta.io --agree-tos --no-eff-email -d clean-check.ru -d www.clean-check.ru
+      volumes:
+        - certbot_etc:/etc/letsencrypt   # Persist certificates
+        - certbot_var:/var/www/certbot   # Persist ACME challenges
+      profiles:
+        - "production" 
 
 # These are needed either for sharing data between different containers 
 # or making the data persistent (like for postgres_data).
 volumes:
-  static:
   media:
+  static:
+  certbot_etc:
+  certbot_var:
   postgres_data:

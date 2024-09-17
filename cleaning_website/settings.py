@@ -26,7 +26,6 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', '0') == '1'
-print("DEBUG is set to", DEBUG)
 
 # Database settings
 DATABASES = {
@@ -35,8 +34,8 @@ DATABASES = {
         'NAME': os.getenv('DB_NAME'),
         'USER': os.getenv('DB_USER'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST', 'postgres'),
-        'PORT': os.getenv('DB_PORT', 5432),
+        'HOST':'postgres',
+        'PORT': 5432,
     }
 }
 
