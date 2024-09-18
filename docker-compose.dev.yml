@@ -1,12 +1,11 @@
 services:
   django:
     container_name: django
-    image: ${IMAGE}             # If set (in production), image from GHCR is used.
-    build: .                    # If image is unset or --build flag is used, build is used.
-    entrypoint: /usr/src/app/entrypoint.sh
+    build: .
+    entrypoint: ["/usr/src/app/entrypoint.sh"]
     volumes:
-      - ${CODE_VOLUME}          # Set to .:/usr/src/app in dev, unset in prod.
-      - static:/var/www/static  # Mount static dir to share with nginx in dev, unset in prod.
+      - .:/usr/src/app
+      - static:/var/www/static  # Mount static dir to share with nginx
       - media:/var/www/media    # Mount media dir to share with nginx
     ports:
       - "5678:5678"             # Port for VScode debugger to attach
@@ -39,13 +38,10 @@ services:
     image: nginx:1.27
     ports:
       - "80:80"                # HTTP requests
-      - "443:443"              # HTTPS requests
     volumes:
-      - ./nginx/${ENV}/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./nginx/nginx.dev.conf:/etc/nginx/conf.d/default.conf
       - static:/var/www/static
       - media:/var/www/media
-      - certbot_etc:/etc/letsencrypt
-      - certbot_var:/var/www/certbot
     depends_on:
       - django
 
@@ -58,24 +54,10 @@ services:
     command: /bin/sh -c "echo 'Launching tsc' && tsc --watch > /dev/null 2>&1"
     volumes:
       - .:/usr/src/app
-    profiles:
-      - "development"
-
-  certbot:
-      container_name: certbot
-      image: certbot/certbot
-      command: certonly --webroot --webroot-path=/var/www/certbot --email ak.reg@tuta.io --agree-tos --no-eff-email -d clean-check.ru -d www.clean-check.ru
-      volumes:
-        - certbot_etc:/etc/letsencrypt   # Persist certificates
-        - certbot_var:/var/www/certbot   # Persist ACME challenges
-      profiles:
-        - "production" 
 
 # These are needed either for sharing data between different containers 
 # or making the data persistent (like for postgres_data).
 volumes:
   media:
   static:
-  certbot_etc:
-  certbot_var:
   postgres_data:

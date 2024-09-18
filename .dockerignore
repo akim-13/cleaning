@@ -1,11 +1,10 @@
 # These files are ignored when building an image for production.
 # In development the entire project dir is mounted, so e.g.
 # Dockerfile.tsc will still be used.
-
 .env
 .git
 .gitignore
 .vscode
-docker-compose.yml
-Dockerfile.tsc
 post-checkout
+docker-compose*
+Dockerfile*
