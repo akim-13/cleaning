@@ -16,7 +16,8 @@ if (form) {
 }
 
 const locationName = JSON.parse(document.getElementById('location-name')!.textContent!);
-const locationSocket = new WebSocket(`ws://${window.location.host}/fill-out/${locationName}/`);
+const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+const locationSocket = new WebSocket(`${protocol}//${window.location.host}/fill-out/${locationName}/`);
 
 locationSocket.onopen = function(event) {
     console.log('Connection opened');

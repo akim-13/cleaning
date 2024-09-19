@@ -27,6 +27,13 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', '0') == '1'
 
+if DEBUG:
+    ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0', '127.0.0.1:8000']
+else:
+    ALLOWED_HOSTS = ['clean-check.ru', 'www.clean-check.ru', '89.169.156.59']
+
+CSRF_TRUSTED_ORIGINS = ['https://clean-check.ru', 'https://www.clean-check.ru']
+
 # Database settings
 DATABASES = {
     'default': {
@@ -44,8 +51,6 @@ STATIC_ROOT = '/var/www/static/'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = '/var/www/media/'
-
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost', '0.0.0.0', '127.0.0.1:8000']
 
 # Application definition
 INSTALLED_APPS = [
@@ -134,3 +139,4 @@ CHANNEL_LAYERS = {
         },
     },
 }
+

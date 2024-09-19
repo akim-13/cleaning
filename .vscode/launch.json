@@ -4,8 +4,8 @@
     {
       "name": "Python: Django (Docker)",
       "type": "debugpy",
-      "preLaunchTask": "docker-compose up",
-      "postDebugTask": "docker-compose down",
+      "preLaunchTask": "docker compose up",
+      "postDebugTask": "docker compose down",
       "request": "attach",
       "connect": {
         "host": "localhost",
