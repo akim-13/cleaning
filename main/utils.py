@@ -7,12 +7,12 @@ import pytz
 
 def get_summary_data(request, location):
     location = get_object_or_404(Location, name=location)
+    
+    has_non_blank_sectors = False
 
-    # Extract start date and end date from the GET request
+    # Extract start and end dates
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
-
-    # Parse the start date and end date to date objects
     start_date = parse_date(start_date) if start_date else None
     end_date = parse_date(end_date) if end_date else None
 
@@ -20,39 +20,42 @@ def get_summary_data(request, location):
     total_average_mark = 0
     groups_of_rows = {}
 
-    # Check if the dates are valid
     if start_date and end_date:
         if start_date > end_date:
             messages.info(request, "Выберите период правильно: начало периода не может быть позже конца.")
         else:
-            # Ensure end date includes the entire day
             end_date = end_date + timedelta(days=1)
+            marks = Mark.objects.filter(location=location, creation_datetime__range=[start_date, end_date])
+            comments = Comment.objects.filter(location=location, creation_datetime__range=[start_date, end_date])
 
-            # Filter marks by location and date range
-            marks = Mark.objects.filter(
-                location=location,
-                creation_datetime__range=[start_date, end_date]
-            ).order_by('creation_datetime')
-
-            comments = Comment.objects.filter(
-                location=location,
-                creation_datetime__range=[start_date, end_date]
-            ).order_by('creation_datetime')
-
-            # Get all the zones for the location
-            zone_names = Zone.objects.filter(location=location).values_list('name', flat=True)
+            zones = Zone.objects.filter(location=location)
             
-            # Calculate the average marks for each zone
-            for zone_name in zone_names:
-                zone_marks = marks.filter(zone__name=zone_name)
-                zone_average_mark = sum(mark.mark for mark in zone_marks) / len(zone_marks) if len(zone_marks) > 0 else 0
-                zones_average_marks[zone_name] = zone_average_mark
+            for zone in zones:
+                sectors = zone.sectors.all()
+                
+                if sectors.count() == 1 and sectors.first().name == "":
+                    # Handle zones with blank sectors
+                    zone_marks = marks.filter(sector__zone=zone)
+                    zone_average_mark = sum(mark.mark for mark in zone_marks) / len(zone_marks) if zone_marks else 0
+                    zones_average_marks[zone.name] = {'blank_sector': zone_average_mark}
+                else:
+                    # Handle zones with non-blank sectors
+                    has_non_blank_sectors = True  # Set the flag to True
+                    sector_marks = {}
+                    for sector in sectors:
+                        sector_marks_queryset = marks.filter(sector=sector)
+                        sector_average_mark = sum(mark.mark for mark in sector_marks_queryset) / len(sector_marks_queryset) if sector_marks_queryset else 0
+                        sector_marks[sector.name] = sector_average_mark
+                        
+                    zones_average_marks[zone.name] = sector_marks
 
-            # Calculate the total average mark
+            # Update total_average_mark calculation
             if zones_average_marks:
-                total_average_mark = sum(zones_average_marks.values()) / len(zones_average_marks)
-
-            # Group marks and comments by time period
+                total_average_mark = sum(
+                    [v['blank_sector'] if 'blank_sector' in v else sum(v.values())/len(v) for v in zones_average_marks.values()]
+                ) / len(zones_average_marks)
+    
+            # Group marks and comments by time period (existing logic unchanged)
             while marks.exists():
                 earliest_mark = marks.first()
                 earliest_submission_datetime = earliest_mark.submission_datetime
@@ -76,7 +79,8 @@ def get_summary_data(request, location):
                         raise Exception('Несколько комментариев не могут существовать')
 
                     row = {
-                        'zone': mark.zone.name,
+                        'zone': mark.sector.zone.name,
+                        'sector': mark.sector.name,
                         'mark': mark.mark,
                         'customer_comment': customer_comment,
                         'contractor_comment': contractor_comment
@@ -88,7 +92,7 @@ def get_summary_data(request, location):
                 # Format the time period and date
                 time_format = '%H:%M'
                 date_format = '%Y-%m-%d'
-                time_zone = pytz.timezone(earliest_mark.location.timezone)  # Fetch timezone
+                time_zone = pytz.timezone(earliest_mark.location.timezone)
                 date_display = earliest_mark.creation_datetime.astimezone(time_zone).strftime(date_format)
                 time_period_start = earliest_mark.creation_datetime.astimezone(time_zone).strftime(time_format)
                 time_period_end = earliest_submission_datetime.astimezone(time_zone).strftime(time_format)
@@ -105,6 +109,7 @@ def get_summary_data(request, location):
                 # Remove processed entries
                 marks = marks.filter(submission_datetime__gt=earliest_submission_datetime)
                 comments = comments.filter(submission_datetime__gt=earliest_submission_datetime)
+
     else:
         messages.info(request, "Пожалуйста, выберите начало и конец периода.")
 
@@ -116,4 +121,6 @@ def get_summary_data(request, location):
         'start_date': start_date,
         'end_date': end_date,
         'groups_of_rows': groups_of_rows,
+        'has_non_blank_sectors': has_non_blank_sectors,  
     }
+

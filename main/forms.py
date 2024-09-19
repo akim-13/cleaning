@@ -2,7 +2,8 @@ from django.contrib.auth.forms import UserCreationForm, UserChangeForm, Authenti
 from .models import User, Mark, Comment, Zone, Location
 from datetime import datetime, timezone
 from django import forms
-from .models import User, Location, Zone 
+from .models import User, Location, Zone, Sector
+from django.forms import modelformset_factory
 
 class CustomUserCreationForm(UserCreationForm):
     location = forms.ModelMultipleChoiceField(
@@ -149,5 +150,18 @@ class ZoneForm(forms.ModelForm):
         labels = {
             'name': 'Название зоны',
         }
+        
+ZoneFormSet = modelformset_factory(Zone, fields=['name'], extra=1)
 
-ZoneFormSet = forms.inlineformset_factory(Location, Zone, form=ZoneForm, extra=1, can_delete=True)
+class SectorForm(forms.ModelForm):
+    class Meta:
+        model = Sector
+        fields = ['name', 'operation_criteria']
+        labels = {
+            'name': 'Название сектора',
+            'operation_criteria': 'Операция/Критерий оценивания',
+        }
+
+# Define a SectorFormSet
+SectorFormSet = modelformset_factory(Sector, form=SectorForm, extra=1)
+

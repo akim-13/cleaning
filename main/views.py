@@ -1,5 +1,5 @@
-from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm, LocationForm, ZoneFormSet
-from .models import Location, User, Zone, Mark, Comment
+from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm, LocationForm
+from .models import Location, User, Zone, Mark, Comment, Sector
 from .decorators import groups_required
 from django.http import Http404, JsonResponse, HttpResponse
 from django.contrib import messages
@@ -325,23 +325,50 @@ def summary_pdf(request, location):
 
     return response
 
+
 @groups_required('representative', 'configurator')
 @login_required
 def configurator(request):
     if request.method == 'POST':
-        location_form = LocationForm(request.POST)
+        name = LocationForm(request.POST)
+        
+        if name.is_valid():
+            location = name.save()
 
-        if location_form.is_valid():
-            location = location_form.save()
+            # Iterate through the zones and save them
+            zones_data = request.POST.getlist('zones[0][name]')  
+            zone_index = 0  # Start zone index at 0
 
-            zones = request.POST.getlist('zones[]')
-            for zone_name in zones:
-                Zone.objects.create(location=location, name=zone_name)
+            while request.POST.get(f'zones[{zone_index}][name]'):
+                zone_name = request.POST.get(f'zones[{zone_index}][name]')
+
+                if zone_name:  
+                    # Create Zone
+                    zone = Zone.objects.create(location=location, name=zone_name)
+
+                    # Handle sectors for the current zone
+                    sector_index = 0  
+
+                    while request.POST.get(f'zones[{zone_index}][sectors][{sector_index}][name]'):
+                        sector_name = request.POST.get(f'zones[{zone_index}][sectors][{sector_index}][name]')
+                        criteria = request.POST.get(f'zones[{zone_index}][sectors][{sector_index}][criteria]')
+
+                        # Ensure the sector name is not empty
+                        if sector_name and sector_name.strip():
+                            Sector.objects.create(
+                                zone=zone,
+                                name=sector_name.strip(),
+                                operation_criteria=criteria.strip() if criteria else ''
+                            )
+
+                        sector_index += 1  
+
+                zone_index += 1  
+            
             return redirect('main')
-
     else:
-        location_form = LocationForm()
+        name = LocationForm()
 
     return render(request, 'main/configurator.html', {
-        'location_form': location_form,
+        'name': name,
     })

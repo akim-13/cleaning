@@ -1,31 +1,43 @@
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
+    background-color: #f9f9f9;
 }
+
 .container {
-    max-width: 600px;
+    max-width: 700px;
     margin: 0 auto;
     padding: 20px;
     border: 1px solid #ccc;
-    border-radius: 5px;
+    border-radius: 8px;
+    background-color: #fff;
 }
+
 h2 {
     text-align: center;
     margin-bottom: 20px;
 }
+
 .form-group {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
+
 .form-group label {
     display: block;
     margin-bottom: 5px;
+    font-weight: bold;
 }
+
 .form-group input[type="text"],
 .form-group input[type="number"] {
     width: 100%;
     padding: 8px;
     box-sizing: border-box;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
 }
+
 .form-group button {
     padding: 10px 15px;
     background-color: #4CAF50;
@@ -33,31 +45,78 @@ h2 {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    display: inline-block;
+    margin-top: 10px;
 }
+
 .form-group button:hover {
     background-color: #45a049;
 }
+
 .zone-list {
     margin-bottom: 20px;
 }
+
 .zone-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    background-color: #f2f2f2;
 }
+
 .zone-item input {
     flex: 1;
     padding: 8px;
     margin-right: 10px;
+    width: 100%;
+    margin-bottom: 10px;
 }
-.zone-item .remove-zone {
+
+.zone-item .remove-zone,
+.sector-item .remove-sector {
     background-color: #f44336;
     color: white;
     padding: 8px;
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    margin-top: 10px;
 }
-.zone-item .remove-zone:hover {
+
+.zone-item .remove-zone:hover,
+.sector-item .remove-sector:hover {
     background-color: #e53935;
+}
+
+.sector-list {
+    margin-top: 10px;
+}
+
+.sector-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.sector-item input {
+    flex: 1;
+    padding: 8px;
+    margin-right: 10px;
+}
+
+.add-sector-btn,
+.add-zone-btn {
+    padding: 8px 12px;
+    background-color: #2196F3;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.add-sector-btn:hover,
+.add-zone-btn:hover {
+    background-color: #1E88E5;
 }

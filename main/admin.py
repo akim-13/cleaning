@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Location, User, Zone, Mark, Comment
+from .models import Location, User, Zone, Mark, Comment, Sector
 from .forms import CustomUserCreationForm, CustomUserChangeForm
 
 # ??: BaseUserAdmin is the same as UserAdmin, so what does this inheritance mean?
@@ -37,3 +37,4 @@ admin.site.register(Location)
 admin.site.register(Zone)
 admin.site.register(Mark)
 admin.site.register(Comment)
+admin.site.register(Sector)

@@ -41,15 +41,35 @@
                     <thead>
                         <tr>
                             <th>Зона</th>
+                            <!-- Check if any zone has non-blank sectors to display the "Сектор" column -->
+                            {% for zone, sector_data in zones_average_marks.items %}
+                                {% if has_non_blank_sectors %}
+                                    <th>Сектор</th>
+                                {% endif %}
+                            {% endfor %}
                             <th>Средняя оценка</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for zone, average in zones_average_marks.items %}
-                            <tr>
-                                <td>{{ zone }}</td>
-                                <td>{{ average|floatformat:2 }}</td>
-                            </tr>
+                        {% for zone, sector_data in zones_average_marks.items %}
+                            {% if sector_data.blank_sector is defined %}
+                                <!-- Zone has only a blank sector (no real sectors): display zone-level average -->
+                                <tr>
+                                    <td>{{ zone }}</td>
+                                    <td colspan="2">{{ sector_data.blank_sector|floatformat:2 }}</td>
+                                </tr>
+                            {% else %}
+                                <!-- Zone with real sectors: display sector-level averages -->
+                                {% for sector, average in sector_data.items %}
+                                    <tr>
+                                        {% if forloop.first %}
+                                            <td rowspan="{{ sector_data|length }}">{{ zone }}</td>
+                                        {% endif %}
+                                        <td>{{ sector }}</td>
+                                        <td>{{ average|floatformat:2 }}</td>
+                                    </tr>
+                                {% endfor %}
+                            {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>
@@ -63,7 +83,8 @@
                 <p>Нет данных за выбранный период.</p>
             {% endif %}
         </div>
-    </div>
+        
+        
 
     <div class="tables-container">
         <h2>Данные по каждой зоне за выбранный период:</h2>
@@ -75,6 +96,10 @@
                     <thead>
                         <tr>
                             <th>Зона</th>
+                            <!-- Only show Sector column if sectors exist in any row -->
+                            {% if rows.0.sector %}
+                                <th>Сектор</th>
+                            {% endif %}
                             <th>Оценка</th>
                             <th>Комментарий Заказчика</th>
                             <th>Комментарий Исполнителя</th>
@@ -84,6 +109,9 @@
                         {% for row in rows %}
                             <tr>
                                 <td>{{ row.zone }}</td>
+                                {% if row.sector %}
+                                    <td>{{ row.sector }}</td>
+                                {% endif %}
                                 <td>{{ row.mark }}</td>
                                 <td>{{ row.customer_comment }}</td>
                                 <td>{{ row.contractor_comment }}</td>
@@ -94,6 +122,7 @@
             {% endwith %}
         {% endfor %}
     </div>
+        
 
     <script src="{% static 'main/js/summary.js' %}"></script>
     <script src="{% static 'main/js/flatpickr.min.js' %}"></script>

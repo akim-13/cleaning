@@ -7,10 +7,12 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 # Currently, these are not set for debugging purposes.
 
 class Location(models.Model):
-    name = models.CharField(verbose_name = 'Объект', max_length=50)
+    # Relations
+    name = models.CharField(verbose_name='Объект', max_length=50)
     timezone = models.CharField(max_length=255, default='Europe/Moscow')
-    mark_range_min = models.SmallIntegerField(verbose_name = 'Минимальная оценка', default=0)
-    mark_range_max = models.SmallIntegerField(verbose_name = 'Максимальная оценка', default=5)
+    mark_range_min = models.SmallIntegerField(verbose_name='Минимальная оценка', default=0)
+    mark_range_max = models.SmallIntegerField(verbose_name='Максимальная оценка', default=5)
+    has_sectors = models.BooleanField(verbose_name='Имеет секторы', default=True)
 
     class Meta:
         verbose_name = 'Объект'
@@ -94,9 +96,8 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class Zone(models.Model):
     # Relations.
-    created_by = models.ForeignKey(User, verbose_name="Создано", on_delete=models.PROTECT, related_name='zones', null=True, blank=True)
+    created_by = models.ForeignKey('User', verbose_name="Создано", on_delete=models.PROTECT, related_name='zones',null=True, blank=True)
     location = models.ForeignKey(Location, verbose_name="Объект", on_delete=models.CASCADE, related_name='zones')
-
     name = models.CharField(max_length=255)
 
     class Meta:
@@ -106,25 +107,30 @@ class Zone(models.Model):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # If location does not have sectors, ensure a blank sector exists
+        if not self.location.has_sectors and not self.sectors.exists():
+            Sector.objects.create(zone=self, name="")
+
 
 class Sector(models.Model):
     # Relations.
-    zone = models.ForeignKey(Zone, verbose_name = 'Зона', on_delete=models.CASCADE, related_name='sectors')
-    
-    name = models.CharField(max_length=255, verbose_name="Название сектора")
+    zone = models.ForeignKey(Zone, verbose_name='Зона', on_delete=models.CASCADE, related_name='sectors')
+    name = models.CharField(max_length=255, verbose_name="Название сектора", null=True, blank=True)
+    operation_criteria = models.CharField(max_length=255, verbose_name='Операция/Критерий оценивания',null=True, blank=True)
 
     class Meta:
         verbose_name = 'Сектор'
         verbose_name_plural = 'Секторы'
-    
+
     def __str__(self):
         return f"{self.zone.name} - {self.name}"
 
 
 class Mark(models.Model):
     # Relations.
-    zone = models.ForeignKey(Zone, verbose_name = 'Зона', on_delete = models.CASCADE, related_name='marks')
-    sector = models.ForeignKey(Sector, verbose_name = 'Сектор', on_delete = models.CASCADE, related_name='marks', null=True, blank=True)
+    sector = models.ForeignKey(Sector, verbose_name = 'Сектор', on_delete = models.CASCADE, related_name='marks')
     user = models.ForeignKey(User, verbose_name = 'Пользователь', on_delete = models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
     location = models.ForeignKey(Location, verbose_name = 'Объект', on_delete = models.CASCADE, null=True, blank=True, related_name='marks')
 
@@ -142,18 +148,14 @@ class Mark(models.Model):
         verbose_name_plural = 'Оценки'
 
     def __str__(self):
-        if self.sector:
-            display_string = f'[{self.location}] {self.sector.zone} - {self.sector}: {self.mark} '
-        else:
-            display_string = f'[{self.location}] {self.zone}: {self.mark} '
+        display_string = f'[{self.location}] {self.sector.zone} - {self.sector}: {self.mark} '
         
         return display_string + '(✔)' if self.is_approved else display_string + '(❌)'
 
 
 class Comment(models.Model):
     # Relations.
-    zone = models.ForeignKey(Zone, verbose_name = 'Зона', on_delete=models.CASCADE, related_name='comments')
-    sector = models.ForeignKey(Sector, verbose_name='Сектор', on_delete=models.CASCADE, related_name='comments', null=True, blank=True)
+    sector = models.ForeignKey(Sector, verbose_name='Сектор', on_delete=models.CASCADE, related_name='comments')
     user = models.ForeignKey(User, verbose_name = 'Пользователь', on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='comments')
     location = models.ForeignKey(Location, verbose_name = 'Объект', on_delete=models.CASCADE, null=True, blank=True, related_name='comments')
 
@@ -172,10 +174,7 @@ class Comment(models.Model):
         verbose_name_plural = 'Комментарии'
 
     def __str__(self):
-        if self.sector:
-            display_string = f'[{self.location}] {self.sector.zone} - {self.sector}:'
-        else:
-            display_string = f'[{self.location}] {self.zone}:'
+        display_string = f'[{self.location}] {self.sector.zone} - {self.sector}:'
         
         if self.is_made_by_customer_not_contractor:
             return display_string + f'Customer: "{self.comment}"'

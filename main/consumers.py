@@ -10,6 +10,7 @@ from channels.generic.websocket import WebsocketConsumer
 from .views import encode_location_name
 from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm,LocationForm, ZoneFormSet
 
+
 # NOTE: Channels needs a Redis server. To run it, run:
 # sudo docker run --rm -p 6379:6379 redis:7
 
