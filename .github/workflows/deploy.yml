@@ -3,7 +3,7 @@ name: Build and deploy Docker image
 on:
   push:
     branches:
-      # WARNING: Change to production!
+      # WARNING: Change to production after testing!
       - docker
 
 jobs:
@@ -21,17 +21,9 @@ jobs:
         # WARNING: GHCR Personal Access Token expires! Recreate every 90 days.
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Build and tag Docker image
+      - name: Build and push Docker image to GHCR
         run: |
           IMAGE_NAME=ghcr.io/${{ github.repository }}:${{ github.sha }}
-          docker buildx build -t $IMAGE_NAME .
-          docker tag $IMAGE_NAME ghcr.io/${{ github.repository }}:latest
-          echo "Image built: $IMAGE_NAME"
-
-      - name: Push Docker image to GHCR
-        run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}:${{ github.sha }}
-          docker push $IMAGE_NAME
-          docker push ghcr.io/${{ github.repository }}:latest
-          echo "Image pushed: $IMAGE_NAME"
-
+          docker buildx build -t $IMAGE_NAME --push .
+          docker buildx build -t ghcr.io/${{ github.repository }}:latest --push .
+          echo "Image built and push: $IMAGE_NAME"
