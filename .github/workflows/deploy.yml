@@ -3,8 +3,7 @@ name: Build and deploy Docker image
 on:
   push:
     branches:
-      # WARNING: Change to production after testing!
-      - docker
+      - production
 
 jobs:
   build:
@@ -41,11 +40,10 @@ jobs:
             ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
         - name: Deploy to the server
-          # WARNING: Change docker branch to production.
           run: |
             ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
               cd /mnt/data/cleaning-website
-              git checkout docker
+              git checkout production
               git pull --strategy-option theirs
               docker compose -f docker-compose.prod.yml pull django
               docker compose -f docker-compose.prod.yml up -d
