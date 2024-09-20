@@ -26,3 +26,26 @@ jobs:
           PREFIX=ghcr.io/${{ github.repository }}
           docker buildx build -t $PREFIX:${{ github.sha }} -t $PREFIX:latest --push .
           echo "Image built and pushed with tags: ${{ github.sha }} and latest"
+
+  deploy:
+      runs-on: ubuntu-latest
+      needs: build
+
+      steps:
+        - name: Checkout code
+          uses: actions/checkout@v3
+
+        - name: Add SSH key for deployment
+          uses: webfactory/ssh-agent@v0.8.1
+          with:
+            ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+        - name: Deploy to the server
+          run: |
+            ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+              cd /mnt/data/cleaning-website
+              git checkout production
+              git pull -X theirs
+              docker compose -f docker-compose.prod.yml pull django
+              docker compose -f docker-compose.prod.yml up -d
+            EOF
