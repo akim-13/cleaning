@@ -38,12 +38,12 @@ jobs:
         - name: Deploy via ssh
           uses: garygrossgarten/github-action-ssh@0.8.0
           with:
-            host: {{ secrets.SSH_HOST }}
-            username: {{ secrets.SSH_USER }}
-            privateKey: {{ secrets.SSH_PRIVATE_KEY }}
+            host: ${{ secrets.SSH_HOST }}
+            username: ${{ secrets.SSH_USER }}
+            privateKey: ${{ secrets.SSH_PRIVATE_KEY }}
             # WARNING: choose the one that works.
-            password: {{ secrets.SSH_PASSWORD}}
-            passphrase: {{ secrets.SSH_PASSWORD }}
+            password: ${{ secrets.SSH_PASSWORD}}
+            passphrase: ${{ secrets.SSH_PASSWORD }}
             command: |
               cd /mnt/data/cleaning-website
               git checkout production
