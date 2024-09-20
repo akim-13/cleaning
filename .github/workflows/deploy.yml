@@ -21,18 +21,8 @@ jobs:
         # WARNING: GHCR Personal Access Token expires! Recreate every 90 days.
         run: echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      - name: Set image tags
-        id: tag_version
+      - name: Build and push Docker image
         run: |
-          if [ -n "${{ github.ref_type }}" ] && [ "${{ github.ref_type }}" == "tag" ]; then
-            VERSION=${{ github.ref_name }}  # Use the Git tag as the version
-          else
-            VERSION=${{ github.sha }}  # Default to commit SHA if no tag is found
-          fi
-          echo "VERSION=$VERSION" >> $GITHUB_ENV
-
-      - name: Build and tag Docker image
-        run: |
-          IMAGE_NAME=ghcr.io/${{ github.repository }}:${{ env.VERSION }}
-          docker buildx build -t $IMAGE_NAME -t ghcr.io/${{ github.repository }}:latest --push .
-          echo "Image built and pushed with tags: $IMAGE_NAME and latest"
+          PREFIX=ghcr.io/${{ github.repository }}
+          docker buildx build -t $PREFIX:${{ github.sha }} -t $PREFIX:latest --push .
+          echo "Image built and pushed with tags: ${{ github.sha }} and latest"
