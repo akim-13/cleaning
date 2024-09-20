@@ -35,17 +35,18 @@ jobs:
         - name: Checkout code
           uses: actions/checkout@v3
 
-        - name: Add SSH key for deployment
-          uses: webfactory/ssh-agent@v0.8.1
+        - name: Deploy via ssh
+          uses: garygrossgarten/github-action-ssh@0.8.0
           with:
-            ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-        - name: Deploy to the server
-          run: |
-            ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+            host: {{ secrets.SSH_HOST }}
+            username: {{ secrets.SSH_USER }}
+            privateKey: {{ secrets.SSH_PRIVATE_KEY }}
+            # WARNING: choose the one that works.
+            password: {{ secrets.SSH_PASSWORD}}
+            passphrase: {{ secrets.SSH_PASSWORD }}
+            command: |
               cd /mnt/data/cleaning-website
               git checkout production
               git pull -X theirs
               docker compose -f docker-compose.prod.yml pull django
               docker compose -f docker-compose.prod.yml up -d
-            EOF
