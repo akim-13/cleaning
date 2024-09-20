@@ -46,5 +46,6 @@ jobs:
               git checkout production
               git pull --strategy-option theirs
               docker compose -f docker-compose.prod.yml pull django
+              docker compose -f docker-compose.prod.yml down
               docker compose -f docker-compose.prod.yml up -d
             EOF
