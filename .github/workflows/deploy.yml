@@ -37,6 +37,9 @@ jobs:
         - name: Add SSH key for deployment
           uses: webfactory/ssh-agent@v0.9.0
           with:
+            # This is a private key generate somewhere *other* than on the server.
+            # It is checked against the corresponding public key, which must be 
+            # added to ~/.ssh/authorized_keys on the server.
             ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
         - name: Deploy to the server
