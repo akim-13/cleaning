@@ -2,6 +2,7 @@ from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm
 from .models import Location, User, Zone, Mark, Comment
 from .decorators import groups_required
 from django.http import Http404, JsonResponse, HttpResponse
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils.dateparse import parse_date
 from django.template.loader import render_to_string
@@ -11,9 +12,11 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.db.models import Q
 from datetime import datetime, timedelta
-import redis, pytz
+from .utils import get_summary_data
+from weasyprint import HTML
+import redis, pytz, base64
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host='redis', port=6379, db=0)
 from django.contrib.auth.models import Group
 
 def login_view(request):
@@ -93,12 +96,12 @@ def get_form_data_row_by_row(data, row_num):
     return form_data
 
 
-def handle_POST_request(request, location):
+def save_form_data(request, location):
     data = dict(request.POST)
 
     no_new_rows_added = data.get('zones[]') is None
     if no_new_rows_added:
-        return redirect('fill_out', location=location)
+        return None
         
     num_of_rows = len(data['zones[]'])
     for row_num in range(num_of_rows):
@@ -111,15 +114,11 @@ def handle_POST_request(request, location):
             is_last_iteration = row_num == num_of_rows - 1
             if is_last_iteration:
                 redis_client.set(f'submission_successful_in_{location}', 'true')
-                return redirect('fill_out', location=location)
+                # NOTE: The form is not needed, since we will get redirected now.
+                return None
         else:
-            # TODO: Figure out what to do if the form is not valid.
-            # TODO: Implement actual logging.
-            print('ERROR: Form is invalid!')
-            print('form.errors:', form.errors)
             redis_client.set(f'submission_successful_in_{location}', 'false')
-
-    return form
+            return form
 
 
 # TODO: Untested! Especially the form submission part. Write thorough tests.
@@ -129,11 +128,36 @@ def fill_out(request, location):
     if not Location.objects.filter(name=location).exists():
         raise Http404('Локация не найдена')
 
-    redis_client.set(f'submission_successful_in_{location}', 'unknown')
+    form_data_saved_successfully = (redis_client.get(f'submission_successful_in_{location}') is not None) and (redis_client.get(f'submission_successful_in_{location}').decode('utf-8') == 'true')
 
+    # a) Form is submitted.
     if request.method == 'POST':
-        # TODO: Fix form resubmission duplicates.
-        form = handle_POST_request(request, location)
+        form = save_form_data(request, location)
+        form_data_saved_successfully = redis_client.get(f'submission_successful_in_{location}').decode('utf-8') == 'true'
+
+        # a.1) Form is valid; redirect to make a GET request.
+        if form_data_saved_successfully:
+            return redirect('fill_out', location=location)
+
+        # a.2) Form is invalid; insert form errors via AJAX.
+        request_is_ajax = request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
+        if request_is_ajax:
+            return JsonResponse({
+                'success': False,
+                'errors': form.errors
+            }, status=400)
+
+        # a.3) Invalid form and non-AJAX request. Should NEVER happen!!
+        # TODO: Implement actual logging.
+        print('ERROR\n'*5)
+        print('How did you even get here? Use AJAX!!')
+        print('form.errors:', form.errors)
+
+    # b) GET request from "a.1)".
+    elif form_data_saved_successfully:
+        form = FillOutForm(location=location)
+
+    # c) General GET request.
     else:
         # Do not render the page if there are multiple active users.
         # Instead, fetch the data from an active user via WebSockets (see `FillOutConsumer`).
@@ -144,7 +168,9 @@ def fill_out(request, location):
                 'location': location
             })
 
+        redis_client.set(f'submission_successful_in_{location}', 'unknown')
         form = FillOutForm(location=location)
+
 
     groups_of_rows = generate_groups_of_rows(location)
 
@@ -160,7 +186,7 @@ def fill_out(request, location):
         page_contents_after_submission = render_to_string('main/fill_out.html', context)
 
         async_to_sync(channel_layer.group_send)(
-            location, {
+            encode_location_name(location), {
                 'type': 'send_page_contents_after_submission',
                 'page_contents_after_submission': page_contents_after_submission,
             }
@@ -184,7 +210,9 @@ def generate_groups_of_rows(location):
 
     groups_of_rows = {}
 
-    location_today_filter = Q(location__name=location, creation_datetime__date=datetime.utcnow())
+    timezone = pytz.timezone(Location.objects.get(name=location).timezone)
+    now = timezone.localize(datetime.now())
+    location_today_filter = Q(location__name=location, creation_datetime__date=now.date())
     todays_marks = Mark.objects.filter(location_today_filter).order_by('creation_datetime')
     todays_comments = Comment.objects.filter(location_today_filter).order_by('creation_datetime')
     
@@ -206,7 +234,6 @@ def generate_groups_of_rows(location):
             except Comment.DoesNotExist:
                 pass
             except Comment.MultipleObjectsReturned:
-                # FIXME: F5 to resubmit the form triggers this exception.
                 raise Exception('Multiple comments cannot have the same creation_datetime')
 
             row = {
@@ -221,9 +248,8 @@ def generate_groups_of_rows(location):
                 same_time_period_rows.append(row)
 
         time_format = '%H:%M'
-        time_zone = pytz.timezone(earliest_mark.location.timezone)
-        time_period_start = earliest_mark.creation_datetime.astimezone(time_zone).strftime(time_format)
-        time_period_end = earliest_submission_datetime.astimezone(time_zone).strftime(time_format)
+        time_period_start = earliest_mark.creation_datetime.astimezone(timezone).strftime(time_format)
+        time_period_end = earliest_submission_datetime.astimezone(timezone).strftime(time_format)
         formatted_time_period = f'{time_period_start} - {time_period_end}'
 
         # NOTE: Weird edge case: if there are multiple submissions within one minute,
@@ -241,60 +267,59 @@ def generate_groups_of_rows(location):
         todays_marks = todays_marks.filter(remove_processed_entries_filter)
 
     return groups_of_rows
+
+
+
+def encode_location_name(location_name):
+    encoded_location_name = base64.urlsafe_b64encode(location_name.encode('utf-8')).decode('utf-8')
+    # Remove any '=' padding characters.
+    encoded_location_name = encoded_location_name.rstrip('=')
+
+    if len(encoded_location_name) >= 100:
+        raise Exception('Location name is too long')
+
+    return encoded_location_name
     
 
 @groups_required('representative_customer', 'representative_contractor')
 @login_required
 def summary(request, location):
-    if not Location.objects.filter(name=location).exists():
-        raise Http404('Локация не найдена')
-    
-    location = Location.objects.get(name=location)
-    
-    # Extract start date and end date from the GET request
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
+    # Use the utility function to get context data
+    context = get_summary_data(request, location)
 
-    # Parse the start date and end date to date objects
-    start_date = parse_date(start_date) if start_date else None
-    end_date = parse_date(end_date) if end_date else None
+    return render(request, 'main/summary.html', {
+        'location': context['location'],
+        'zones_average_marks': context['zones_average_marks'],
+        'total_average_mark': context['total_average_mark'],
+        'start_date': context['start_date'].strftime('%Y-%m-%d') if context['start_date'] else '',
+        'end_date': context['end_date'].strftime('%Y-%m-%d') if context['end_date'] else '',
+        'groups_of_rows': context['groups_of_rows']
+    })
 
-    # Initialize zones_average_marks and total_average_mark
-    zones_average_marks = {}
-    total_average_mark = 0
 
-    if start_date and end_date:
-        # Ensure end date includes the entire day
-        end_date = end_date + timedelta(days=1)
+@groups_required('representative_customer', 'representative_contractor')
+@login_required
+def summary_pdf(request, location):
+    # Use the utility function to get context data
+    context = get_summary_data(request, location)
 
-        # Filter marks by location and date range
-        marks = Mark.objects.filter(
-            location=location,
-            creation_datetime__range=[start_date, end_date]
-        )
-        
-        # Get all the zones for the location
-        zone_names = Zone.objects.filter(location=location).values_list('name', flat=True)
-        
-        # Calculate the average marks for each zone
-        for zone_name in zone_names:
-            zone_marks = marks.filter(zone__name=zone_name)
-            zone_average_mark = sum(mark.mark for mark in zone_marks) / len(zone_marks) if len(zone_marks) > 0 else 0
-            zones_average_marks[zone_name] = zone_average_mark
+    html_string = render_to_string('main/summary.html', {
+        'location': context['location'],
+        'zones_average_marks': context['zones_average_marks'],
+        'total_average_mark': context['total_average_mark'],
+        'start_date': context['start_date'].strftime('%Y-%m-%d') if context['start_date'] else '',
+        'end_date': context['end_date'].strftime('%Y-%m-%d') if context['end_date'] else '',
+        'groups_of_rows': context['groups_of_rows']
+    })
 
-        # Calculate the total average mark
-        if zones_average_marks:
-            total_average_mark = sum(zones_average_marks.values()) / len(zones_average_marks)
+    # Create a PDF from the HTML string
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="summary_{context["location"].name}.pdf"'
 
-    context = {
-        'location': location,
-        'zones_average_marks': zones_average_marks,
-        'total_average_mark': total_average_mark,
-        'start_date': start_date,
-        'end_date': end_date,
-    }
+    # Generate PDF
+    HTML(string=html_string).write_pdf(response)
 
-    return render(request, 'main/summary.html', context)
+    return response
 
 
 @login_required

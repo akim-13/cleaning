@@ -51,9 +51,9 @@ class CustomAuthenticationForm(AuthenticationForm):
 
 
 class FillOutForm(forms.Form):
-    # NOTE: The `zone` field is set in the `__init__` method.
+    # NOTE: The `zone` and `mark` fields are set in the `__init__()` method.
     zone = forms.ModelChoiceField(queryset=Zone.objects.none())
-    mark = forms.ChoiceField(choices=Mark.MARK_CHOICES)
+    mark = forms.ChoiceField(choices=Mark.objects.none())
     is_approved = forms.BooleanField()
     customer_comment = forms.CharField(required=False)
     contractor_comment = forms.CharField(required=False)
@@ -68,6 +68,9 @@ class FillOutForm(forms.Form):
             raise ValueError('Location is required when creating a FillOutForm')
 
         super().__init__(*args, **kwargs)
+        mark_range_min = Location.objects.get(name=self.location).mark_range_min
+        mark_range_max = Location.objects.get(name=self.location).mark_range_max
+        self.fields['mark'].choices = [(i, i) for i in range(mark_range_min, mark_range_max + 1)]
         self.fields['zone'].queryset = Zone.objects.filter(location__name=self.location)
 
 
@@ -78,11 +81,11 @@ class FillOutForm(forms.Form):
         is_approved = cleaned_data.get('is_approved')
 
         if zone is None:
-            raise forms.ValidationError('Zone is required')
+            raise forms.ValidationError('Зона не выбрана')
         if mark is None:
-            raise forms.ValidationError('Mark is required')
+            raise forms.ValidationError('Оценка не выбрана')
         if not is_approved:
-            raise forms.ValidationError('Approval is required')
+            raise forms.ValidationError('Оценка не подтверждена')
 
         return cleaned_data
 

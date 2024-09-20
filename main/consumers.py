@@ -7,16 +7,18 @@ from django.shortcuts import redirect
 from asgiref.sync import async_to_sync
 from django.template.loader import render_to_string
 from channels.generic.websocket import WebsocketConsumer
+from .views import encode_location_name
 from .forms import FillOutForm, CustomUserCreationForm, CustomAuthenticationForm,LocationForm, ZoneFormSet
 
 # NOTE: Channels needs a Redis server. To run it, run:
 # sudo docker run --rm -p 6379:6379 redis:7
 
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host='redis', port=6379, db=0)
 
 class FillOutConsumer(WebsocketConsumer):
     def connect(self):
-        self.group_name_location = self.scope['url_route']['kwargs']['location_name']
+        self.location_name = self.scope['url_route']['kwargs']['location_name']
+        self.group_name_location = encode_location_name(self.location_name)
 
         # Join a group (a fill-out table for this location).
         async_to_sync(self.channel_layer.group_add)(
@@ -25,18 +27,18 @@ class FillOutConsumer(WebsocketConsumer):
 
         self.accept() 
 
-        if redis_client.get(f'submission_successful_in_{self.group_name_location}') is None:
-            raise Exception('"submission_successful_in_{location}" must be set by now')
+        if redis_client.get(f'submission_successful_in_{self.location_name}') is None:
+            redis_client.set(f'submission_successful_in_{self.location_name}', 'unknown')
 
-        submission_successful = redis_client.get(f'submission_successful_in_{self.group_name_location}').decode('utf-8')
-        group_has_active_users = redis_client.scard(f'active_users_in_{self.group_name_location}') > 0        
+        submission_successful = redis_client.get(f'submission_successful_in_{self.location_name}').decode('utf-8')
+        group_has_active_users = redis_client.scard(f'active_users_in_{self.location_name}') > 0        
         if submission_successful == 'true':
             # NOTE: Form submission causes the page to reload, hence the submitter's
             # websocket has to reconnect. This if prevents them from unnecessarily
             # requesting the page contents from other users.
             pass
         elif group_has_active_users:
-            active_user = redis_client.srandmember(f'active_users_in_{self.group_name_location}').decode('utf-8')
+            active_user = redis_client.srandmember(f'active_users_in_{self.location_name}').decode('utf-8')
 
             async_to_sync(self.channel_layer.send)(
                 active_user, {
@@ -49,7 +51,7 @@ class FillOutConsumer(WebsocketConsumer):
             update_current_page_contents_thread = Thread(target=self.update_current_page_contents)
             update_current_page_contents_thread.start()
 
-        redis_client.sadd(f'active_users_in_{self.group_name_location}', self.channel_name)
+        redis_client.sadd(f'active_users_in_{self.location_name}', self.channel_name)
 
 
     def update_current_page_contents(self):
@@ -71,11 +73,11 @@ class FillOutConsumer(WebsocketConsumer):
             self.group_name_location, self.channel_name
         )
 
-        redis_client.srem(f'active_users_in_{self.group_name_location}', self.channel_name)
+        redis_client.srem(f'active_users_in_{self.location_name}', self.channel_name)
 
-        group_is_empty = redis_client.scard(f'active_users_in_{self.group_name_location}') == 0
+        group_is_empty = redis_client.scard(f'active_users_in_{self.location_name}') == 0
         if group_is_empty:
-            redis_client.delete(f'active_users_in_{self.group_name_location}')
+            redis_client.delete(f'active_users_in_{self.location_name}')
 
 
     # Receive message from WebSocket.
@@ -134,7 +136,7 @@ class FillOutConsumer(WebsocketConsumer):
 
 
     def generate_new_row_html(self, row_UUID):
-        form = FillOutForm(location=self.group_name_location)
+        form = FillOutForm(location=self.location_name)
         return render_to_string('main/_new_row.html', {'form': form, 'row_UUID': row_UUID})
 
 

@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Оценки</title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="{% static 'main/css/flatpickr.min.css' %}">
     <link rel="stylesheet" href="{% static 'main/css/summary.css' %}">
 </head>
 
@@ -25,6 +25,14 @@
                 <button type="submit">Посмотреть</button>
             </form>
         </div>
+
+        {% if messages %}
+            <div class="messages">
+                {% for message in messages %}
+                    <p>{{ message }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
 
         <div class="results">
             {% if zones_average_marks %}
@@ -52,9 +60,41 @@
             {% endif %}
         </div>
     </div>
+    
+    <a href="/{{ location.name }}/summary/pdf/?start_date={{ start_date }}&end_date={{ end_date }}" class="pdf-download-button">Скачать PDF файл</a>
+
+    <div class="tables-container">
+        <h2>Данные по каждой зоне за выбранный период:</h2>
+        {% for date_time, rows in groups_of_rows.items %}
+            {% with date_display=date_time.0 time_period=date_time.1 %}
+                <h3>Дата: {{ date_display }}</h3>
+                <h3>Период времени: {{ time_period }}</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Зона</th>
+                            <th>Оценка</th>
+                            <th>Комментарий Заказчика</th>
+                            <th>Комментарий Исполнителя</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in rows %}
+                            <tr>
+                                <td>{{ row.zone }}</td>
+                                <td>{{ row.mark }}</td>
+                                <td>{{ row.customer_comment }}</td>
+                                <td>{{ row.contractor_comment }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endwith %}
+        {% endfor %}
+    </div>
 
     <script src="{% static 'main/js/summary.js' %}"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="{% static 'main/js/flatpickr.min.js' %}"></script>
 
 </body>
 </html>

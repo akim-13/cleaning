@@ -8,7 +8,7 @@ db.sqlite3
 .vscode/
 
 # Environment configuration
-.env
+.env*
 
 # Virtual environments
 .venv/

@@ -1,0 +1,68 @@
+services:
+  django:
+    container_name: django
+    image: ghcr.io/akim-13/cleaning-website:latest
+    entrypoint: ["/usr/src/app/entrypoint.sh"]
+    volumes:
+      - static:/var/www/static
+      - media:/var/www/media
+    depends_on:
+      - postgres
+      - redis
+    env_file:
+      - .env
+
+  postgres:
+    container_name: postgres
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    container_name: redis
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  nginx:
+    container_name: nginx
+    image: nginx:1.27
+    ports:
+      - "80:80"                # HTTP requests
+      - "443:443"              # HTTPS requests
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/conf.d/default.conf
+      # Uncomment for initial deployment.
+      #- ./nginx/nginx.initial.conf:/etc/nginx/conf.d/default.conf
+      - static:/var/www/static
+      - media:/var/www/media
+      - certbot_etc:/etc/letsencrypt
+      - certbot_var:/var/www/certbot
+    depends_on:
+      - django
+      - certbot
+
+  certbot:
+    container_name: certbot
+    image: certbot/certbot
+    entrypoint: ["certbot", "renew", "--webroot", "--webroot-path=/var/www/certbot"]
+    # Uncomment for initial deployment.
+    #entrypoint: ["certbot", "certonly", "--webroot", "--webroot-path=/var/www/certbot", "--email", "ak.reg@tuta.io", "--agree-tos", "--no-eff-email", "-d", "clean-check.ru", "-d", "www.clean-check.ru"]
+    volumes:
+      - certbot_etc:/etc/letsencrypt   # Persist and share with nginx
+      - certbot_var:/var/www/certbot   # Persist and share with nginx
+
+# These are needed either for sharing data between different containers
+# or making the data persistent (like for postgres_data).
+volumes:
+  media:
+  static:
+  certbot_etc:
+  certbot_var:
+  postgres_data:

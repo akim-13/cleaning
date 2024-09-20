@@ -7,13 +7,18 @@ from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Permis
 # Currently, these are not set for debugging purposes.
 
 class Location(models.Model):
-    name = models.CharField(verbose_name = 'Объект', max_length=255)
+    name = models.CharField(verbose_name = 'Объект', max_length=50)
     timezone = models.CharField(max_length=255, default='Europe/Moscow')
     mark_range_min = models.SmallIntegerField(verbose_name = 'Минимальная оценка', default=0)
     mark_range_max = models.SmallIntegerField(verbose_name = 'Максимальная оценка', default=5)
 
+    class Meta:
+        verbose_name = 'Объект'
+        verbose_name_plural = 'Объекты'
+
     def __str__(self):
         return self.name
+
 
 class CustomUserManager(BaseUserManager):
 
@@ -80,6 +85,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     # For connecting to tne db table.
     class Meta:
         db_table = 'users'
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'
     
     def __str__(self):
         return self.username
@@ -92,6 +99,10 @@ class Zone(models.Model):
 
     name = models.CharField(max_length=255)
 
+    class Meta:
+        verbose_name = 'Зона'
+        verbose_name_plural = 'Зоны'
+
     def __str__(self):
         return self.name
 
@@ -102,14 +113,16 @@ class Mark(models.Model):
     user = models.ForeignKey(User, verbose_name = 'Пользователь', on_delete=models.PROTECT, null=True, blank=True, editable=False, related_name='marks')
     location = models.ForeignKey(Location, verbose_name = 'Объект', on_delete=models.CASCADE, null=True, blank=True, related_name='marks')
 
-    # TODO: Use mark_range_min and mark_range_max from Location (seems hard to implement atm).
-    MARK_CHOICES = [(i, i) for i in range(0, 6)]
-    mark = models.SmallIntegerField(verbose_name = 'Оценка', choices=MARK_CHOICES)
+    mark = models.SmallIntegerField(verbose_name = 'Оценка')
     is_approved = models.BooleanField(verbose_name = 'Подтверждение', default=False)
     # NOTE: The default value is overridden in form's `save()` 
     # method to store the time when the form was created.
     creation_datetime = models.DateTimeField(default=timezone.now)
     submission_datetime = models.DateTimeField(verbose_name = 'Последние изменение', default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Оценка'
+        verbose_name_plural = 'Оценки'
 
     def __str__(self):
         display_string = f'[{self.location}] {self.zone}: {self.mark} '
@@ -135,6 +148,10 @@ class Comment(models.Model):
     # method to store the time when the form was created.
     creation_datetime = models.DateTimeField(default=timezone.now)
     submission_datetime = models.DateTimeField(verbose_name = 'Последение изменение',default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
 
     def __str__(self):
         display_string = f'[{self.location}] {self.zone}: '
