@@ -3,8 +3,8 @@
 # Dockerfile.tsc will still be used.
 .env
 .git
+.github
 .gitignore
 .vscode
-post-checkout
 docker-compose*
 Dockerfile*
